@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { registerConfigCommand } from "./commands/config.js";
+import { registerAgentCommands } from "./commands/agent/index.js";
 
 const program = new Command();
 
@@ -12,5 +13,6 @@ program
   .option("--server <url>", "override server URL");
 
 registerConfigCommand(program);
+registerAgentCommands(program);
 
 program.parse();

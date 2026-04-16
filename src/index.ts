@@ -2,6 +2,7 @@
 import { Command } from "commander";
 import { registerConfigCommand } from "./commands/config.js";
 import { registerAgentCommands } from "./commands/agent/index.js";
+import { registerSkillCommands } from "./commands/skill/index.js";
 
 const program = new Command();
 
@@ -14,5 +15,6 @@ program
 
 registerConfigCommand(program);
 registerAgentCommands(program);
+registerSkillCommands(program);
 
 program.parse();

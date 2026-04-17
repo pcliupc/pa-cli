@@ -36,9 +36,10 @@ export function registerAgentListCommand(agentCmd: Command): void {
         if (options.all) params.set("all", "true");
         if (options.category) params.set("category", options.category);
         const qs = params.toString();
-        const agents = await client.getJson<AgentListItem[]>(
+        const raw = await client.getJson<AgentListItem[] | { items: AgentListItem[] }>(
           `/api/agents${qs ? `?${qs}` : ""}`,
         );
+        const agents = Array.isArray(raw) ? raw : (raw as { items: AgentListItem[] }).items;
 
         spinner.stop();
 

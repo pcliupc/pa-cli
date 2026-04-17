@@ -70,7 +70,7 @@ export function registerSessionListCommand(sessionCmd: Command): void {
         );
 
         const totalPages = Math.ceil(resp.total / resp.pageSize);
-        if (totalPages > 1) {
+        if (outputFormat !== "json" && totalPages > 1) {
           console.log(`\nShowing ${(resp.page - 1) * resp.pageSize + 1}-${Math.min(resp.page * resp.pageSize, resp.total)} of ${resp.total} (page ${resp.page}/${totalPages})`);
         }
       } catch (err) {

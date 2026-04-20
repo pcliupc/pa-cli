@@ -34,7 +34,7 @@ pa config set serverUrl https://your-pa-instance.example.com
 
 ### 2. 配置 API Key
 
-联系平台管理员获取 API Key，然后配置：
+先在 PA Web 平台登录你自己的账号，然后打开 ` /pa/profile/api-keys ` 创建一个新的 API Key。复制后在本机配置：
 
 ```bash
 pa config set apiKey pa_your_api_key_here
@@ -161,7 +161,7 @@ pa skills-install --dir /path/to/project/.claude/skills
 
 ## 认证
 
-CLI 使用 API Key 认证。API Key 由 PA 平台管理员在服务端配置（环境变量 `PA_CLI_API_KEY`），用户通过 `pa config set apiKey` 配置到本地。
+CLI 使用 API Key 认证。每个登录用户都可以在 PA Web 平台的 `/pa/profile/api-keys` 页面创建和撤销自己的 API Key，然后通过 `pa config set apiKey <key>` 配置到本地。
 
 ---
 

@@ -132,7 +132,25 @@ pa session delete <id> -f                  # 跳过确认
 
 ## AI Agent Skills
 
-CLI 附带 4 个 AI Agent Skills（位于 `skills/` 目录），可供 Claude Code 等 AI Agent 使用：
+CLI 附带 4 个 AI Agent Skills，可供 Claude Code 等 AI Agent 使用。
+
+### 安装 Skills
+
+在项目目录下执行：
+
+```bash
+pa skills-install
+```
+
+这会将 4 个 skills 安装到当前项目的 `.claude/skills/` 目录。安装后重启 Claude Code 即可自动加载。
+
+也可指定目标目录：
+
+```bash
+pa skills-install --dir /path/to/project/.claude/skills
+```
+
+### 包含的 Skills
 
 | Skill | 说明 |
 |-------|------|

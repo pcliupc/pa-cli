@@ -1,6 +1,6 @@
 {
   "name": "@pcliupc/pa-cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "PA Framework CLI - manage agents and skills from the command line",
   "type": "module",
   "bin": {

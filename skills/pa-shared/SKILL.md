@@ -17,18 +17,37 @@ cliHelp: "pa --help"
 首次使用需配置服务器地址和 API Key：
 
 ```bash
-# 配置服务器地址（PA Web 服务地址）
+# 快速开始：直接设置（会自动创建 "local" profile）
 pa config set serverUrl http://localhost:3000
-
-# 配置 API Key（与 Web 端 .env 中的 PA_CLI_API_KEY 一致）
 pa config set apiKey pa_dev_test_key
 ```
 
-查看当前配置：
+### 多环境 Profile 管理
+
+PA CLI 支持多环境配置（Profile），每个 Profile 独立存储 serverUrl 和 apiKey：
 
 ```bash
+# 添加环境 Profile
+pa config profile add local --server-url http://localhost:3000 --api-key pa_dev_key
+pa config profile add staging --server-url https://staging.pa.io --api-key pa_staging_key
+pa config profile add prod --server-url https://pa.io --api-key pa_prod_key
+
+# 切换当前环境
+pa config use staging
+
+# 查看所有 Profile
+pa config profile list
+
+# 查看当前配置
 pa config
+
+# 删除 Profile
+pa config profile remove staging
 ```
+
+**Profile 命名规则：** 只允许字母、数字、连字符、下划线，最长 32 字符，不允许 `default`。
+
+切换 Profile 后，所有后续命令自动使用该环境的 serverUrl 和 apiKey。
 
 ## 认证
 

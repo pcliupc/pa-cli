@@ -30,20 +30,36 @@ npm install -g @pcliupc/pa-cli@latest
 
 ## 快速上手
 
-### 1. 配置服务器地址
+### 1. 添加环境 Profile
 
-指向你的 PA Web 平台地址：
+PA CLI 支持多环境配置（Profile），每个 Profile 独立存储 serverUrl 和 apiKey。先在 PA Web 平台登录你自己的账号，然后打开 `/pa/profile/api-keys` 创建一个新的 API Key。复制后在本机配置：
 
 ```bash
-pa config set serverUrl https://your-pa-instance.example.com
+# 添加一个 Profile（第一个会自动激活）
+pa config profile add local --server-url http://localhost:3000 --api-key pa_your_api_key_here
 ```
 
-### 2. 配置 API Key
-
-先在 PA Web 平台登录你自己的账号，然后打开 ` /pa/profile/api-keys ` 创建一个新的 API Key。复制后在本机配置：
+需要多个环境时继续添加：
 
 ```bash
-pa config set apiKey pa_your_api_key_here
+pa config profile add staging --server-url https://staging.pa.io --api-key pa_staging_key
+pa config profile add prod --server-url https://pa.io --api-key pa_prod_key
+```
+
+> **Profile 命名规则：** 只允许字母、数字、连字符、下划线，最长 32 字符，不允许 `default`。
+
+### 2. 切换环境
+
+```bash
+pa config use staging    # 切换到 staging 环境
+pa config                # 查看当前配置
+```
+
+输出（API Key 自动脱敏）：
+```
+Profile: staging
+serverUrl: https://staging.pa.io
+apiKey:    pa_st*********key
 ```
 
 ### 3. 开始使用
@@ -54,17 +70,17 @@ pa skill list
 pa session list
 ```
 
-### 查看当前配置
+### 多环境 Profile 管理
 
 ```bash
-pa config
+pa config profile list              # 查看所有 Profile
+pa config use <name>                # 切换环境
+pa config set serverUrl <url>       # 修改当前 Profile 的地址
+pa config set apiKey <key>          # 修改当前 Profile 的 Key
+pa config profile remove <name>     # 删除 Profile
 ```
 
-输出（API Key 自动脱敏）：
-```
-serverUrl: https://your-pa-instance.example.com
-apiKey:    pa_yo*********ere
-```
+切换 Profile 后，所有后续命令自动使用该环境的 serverUrl 和 apiKey。
 
 ## 命令列表
 
@@ -167,7 +183,7 @@ pa skills-install --dir /path/to/project/.claude/skills
 
 ## 认证
 
-CLI 使用 API Key 认证。每个登录用户都可以在 PA Web 平台的 `/pa/profile/api-keys` 页面创建和撤销自己的 API Key，然后通过 `pa config set apiKey <key>` 配置到本地。
+CLI 使用 API Key 认证。每个登录用户都可以在 PA Web 平台的 `/pa/profile/api-keys` 页面创建和撤销自己的 API Key。通过 `pa config profile add <name> --api-key <key>` 添加到对应环境的 Profile 中，或使用 `pa config set apiKey <key>` 修改当前 Profile 的 Key。
 
 ---
 
@@ -204,10 +220,10 @@ src/
 │   ├── agent/          # agent list/upload/download/delete
 │   ├── skill/          # skill list/import/delete
 │   ├── session/        # session list/get/delete/logs/feedback
-│   └── config.ts       # config set/view
+│   └── config.ts       # config set/view, profile add/list/remove, use
 ├── lib/
 │   ├── api-client.ts   # HTTP 客户端（认证、错误处理、文件上传下载）
-│   ├── config.ts       # ~/.pa-cli/config.json 读写
+│   ├── config.ts       # ~/.pa-cli/ profile 配置读写
 │   └── output.ts       # table/json 格式化输出
 └── index.ts            # CLI 入口
 ```

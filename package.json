@@ -1,14 +1,22 @@
 {
-  "name": "pa-cli",
+  "name": "@pcliupc/pa-cli",
   "version": "0.1.0",
   "description": "PA Framework CLI - manage agents and skills from the command line",
   "type": "module",
   "bin": {
     "pa": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "skills",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "tsc",
+    "prepublishOnly": "npm run build",
     "dev": "tsx src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest"

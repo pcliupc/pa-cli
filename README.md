@@ -139,9 +139,20 @@ pa session logs <id> --output json         # 完整日志
 pa session feedback <id>                   # 查看反馈评分
 pa session feedback <id> --output json     # 完整反馈
 
+pa session workspace list <id>             # 列出 session 生成的 workspace 文件
+pa session workspace list <id> --output json
+
+pa session workspace download <id> reports/out.md
+pa session workspace download <id> reports/out.md -o ./analysis/out.md
+pa session workspace download <id> reports/out.md --output json
+                                           # JSON 输出下载元数据
+                                           # 不传 -o 时默认保存到当前目录
+
 pa session delete <id>                     # 需确认
 pa session delete <id> -f                  # 跳过确认
 ```
+
+`session workspace` 仅暴露智能体在 session workspace 中生成的文件，不包含用户上传的 `assets/` 内容。
 
 ## 全局选项
 

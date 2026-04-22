@@ -1,7 +1,7 @@
 ---
 name: pa-session
 version: 1.0.0
-description: "PA 会话管理：列出、查看详情、删除会话，获取运行日志和会话反馈。当用户需要查看会话列表、检查会话状态和阶段执行情况、查看运行日志（工具调用、推理记录）、查看用户/管理员反馈评分时触发。"
+description: "PA 会话管理：列出、查看详情、删除会话，获取运行日志、反馈，以及检查和下载 session workspace 里的生成文件。当用户需要查看会话列表、检查会话状态和阶段执行情况、查看运行日志（工具调用、推理记录）、分析智能体生成产物或下载 workspace 文件时触发。"
 metadata:
 requires:
 bins: ["pa"]
@@ -18,6 +18,7 @@ cliHelp: "pa session --help"
 - **阶段（Stage）**：会话中的执行步骤，每个阶段有状态：`active`（进行中）、`completed`（已完成）、`pending`（待执行）。
 - **运行日志（Logs）**：会话执行过程中的工具调用、推理记录等结构化日志。
 - **反馈（Feedback）**：用户和管理员对会话结果的评价，包含多维度评分。
+- **Workspace 文件**：智能体在 session 工作区中生成的文件，可用于排查执行结果或下载做离线分析。不包含用户上传的 `assets/`。
 
 ## 命令参考
 
@@ -103,6 +104,28 @@ pa session feedback <session-id>
 pa session feedback <session-id> --output json
 ```
 
+### 查看与下载 workspace 文件
+
+```bash
+# 列出当前 session 生成的 workspace 文件
+pa session workspace list <session-id>
+
+# JSON 输出原始文件列表
+pa session workspace list <session-id> --output json
+
+# 下载某个生成文件；默认保存到当前目录
+pa session workspace download <session-id> reports/summary.md
+
+# 指定本地保存路径
+pa session workspace download <session-id> reports/summary.md -o ./analysis/summary.md
+
+# 仅输出下载元数据（sessionId / workspacePath / outputPath）
+pa session workspace download <session-id> reports/summary.md --output json
+```
+
+文件列表会返回：`path`、`type`、`size`、`modifiedAt`。
+下载命令只允许访问 session workspace 中可公开分析的生成文件，不包含 `assets/` 和隐藏目录。
+
 ## 会话状态说明
 
 | 状态 | 说明 |
@@ -128,6 +151,10 @@ pa session get <session-id>
 
 # 2. 查看运行日志
 pa session logs <session-id> --limit 20
+
+# 3. 列出并下载生成文件做离线分析
+pa session workspace list <session-id>
+pa session workspace download <session-id> reports/summary.md
 ```
 
 ### 查看用户对会话的评价

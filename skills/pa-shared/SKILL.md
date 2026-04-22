@@ -91,6 +91,7 @@ pa <resource> <action> [options] [arguments]
 
 resource: agent | skill | session | config
 action:   list | get | upload | download | delete | import | logs | feedback
+          workspace list | workspace download
 ```
 
 ## 安全规则

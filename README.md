@@ -87,7 +87,7 @@ pa config profile remove <name>     # 删除 Profile
 ### 智能体管理
 
 ```bash
-pa agent list                              # 列出所有智能体
+pa agent list                              # 列出全部匹配的智能体（自动拉取所有分页）
 pa agent list --all                        # 包括未激活的
 pa agent list --category <id>              # 按分类过滤
 pa agent list --output json                # JSON 格式输出

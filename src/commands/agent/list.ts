@@ -13,6 +13,55 @@ interface AgentListItem {
   updatedAt: string;
 }
 
+interface AgentListPagination {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+interface PaginatedAgentListResponse {
+  items: AgentListItem[];
+  pagination: AgentListPagination;
+}
+
+function isPaginatedResponse(
+  payload: AgentListItem[] | PaginatedAgentListResponse,
+): payload is PaginatedAgentListResponse {
+  return !Array.isArray(payload);
+}
+
+async function fetchAllAgents(
+  client: PaApiClient,
+  baseParams: URLSearchParams,
+): Promise<AgentListItem[]> {
+  const firstQuery = baseParams.toString();
+  const firstPage = await client.getJson<AgentListItem[] | PaginatedAgentListResponse>(
+    `/api/agents${firstQuery ? `?${firstQuery}` : ""}`,
+  );
+
+  if (!isPaginatedResponse(firstPage)) {
+    return firstPage;
+  }
+
+  const agents = [...firstPage.items];
+  const {
+    pagination: { totalPages, pageSize },
+  } = firstPage;
+
+  for (let page = 2; page <= totalPages; page += 1) {
+    const nextParams = new URLSearchParams(baseParams);
+    nextParams.set("page", String(page));
+    nextParams.set("pageSize", String(pageSize));
+    const nextPage = await client.getJson<PaginatedAgentListResponse>(
+      `/api/agents?${nextParams.toString()}`,
+    );
+    agents.push(...nextPage.items);
+  }
+
+  return agents;
+}
+
 export function registerAgentListCommand(agentCmd: Command): void {
   agentCmd
     .command("list")
@@ -21,7 +70,7 @@ export function registerAgentListCommand(agentCmd: Command): void {
     .option("--category <id>", "Filter by category")
     .action(async (options: { all?: boolean; category?: string }) => {
       const config = loadConfig();
-      const parentOpts = agentCmd.parent?.parent?.opts?.() as { output?: string; server?: string } | undefined;
+      const parentOpts = agentCmd.parent?.opts?.() as { output?: string; server?: string } | undefined;
       const serverUrl = parentOpts?.server ?? config.serverUrl;
       const outputFormat = (parentOpts?.output ?? "table") as OutputFormat;
 
@@ -35,11 +84,7 @@ export function registerAgentListCommand(agentCmd: Command): void {
         const params = new URLSearchParams();
         if (options.all) params.set("all", "true");
         if (options.category) params.set("category", options.category);
-        const qs = params.toString();
-        const raw = await client.getJson<AgentListItem[] | { items: AgentListItem[] }>(
-          `/api/agents${qs ? `?${qs}` : ""}`,
-        );
-        const agents = Array.isArray(raw) ? raw : (raw as { items: AgentListItem[] }).items;
+        const agents = await fetchAllAgents(client, params);
 
         spinner.stop();
 

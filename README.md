@@ -91,11 +91,19 @@ pa agent list                              # 列出全部匹配的智能体（�
 pa agent list --all                        # 包括未激活的
 pa agent list --category <id>              # 按分类过滤
 pa agent list --output json                # JSON 格式输出
+                                           # 包含 current_version_number/version_count
 
 pa agent upload ./my-agent/                # 上传目录
 pa agent upload ./agent.yaml               # 上传 yaml
 pa agent upload ./agent.zip                # 上传 zip
-pa agent upload ./my-agent/ --overwrite    # 覆盖同名
+pa agent upload ./my-agent-v2/ --agent demo
+                                           # 给已有逻辑 Agent 创建新版本
+
+pa agent version list demo                 # 列出 demo 的全部版本
+pa agent version get demo v2               # 查看某个版本快照
+pa agent version create demo ./my-agent-v3 --from v2
+                                           # 基于现有逻辑 Agent 创建新版本
+pa agent version publish demo v3           # 切换当前发布版本
 
 pa agent download demo                     # 下载为 demo.zip
 pa agent download demo -o ./demo.zip       # 指定输出路径
@@ -128,9 +136,11 @@ pa session list --agent demo               # 按智能体过滤
 pa session list --scope all --agent demo   # 所有用户（需管理员）
 pa session list --page 2 --limit 10        # 分页
 pa session list --output json              # JSON 格式
+                                           # 包含 agent_version_id/agent_version_number
 
 pa session get <id>                        # 查看详情（阶段状态等）
 pa session get <id> --output json          # 完整详情（含消息）
+                                           # 会显示绑定的 Agent Version
 
 pa session logs <id>                       # 运行日志
 pa session logs <id> --limit 20            # 限制条数
@@ -153,6 +163,13 @@ pa session delete <id> -f                  # 跳过确认
 ```
 
 `session workspace` 仅暴露智能体在 session workspace 中生成的文件，不包含用户上传的 `assets/` 内容。
+
+## Agent 版本模型
+
+- `pa_agents` 是逻辑 Agent，一个逻辑 Agent 下面可以有多个不可变版本。
+- 每次对已有逻辑 Agent 再次上传，都会创建新版本，而不是覆盖旧版本。
+- 每个逻辑 Agent 都有一个“当前发布版本”，新建 session 默认绑定它。
+- session 一旦创建，就固定绑定到具体版本；后续发布新版本不会改变历史 session。
 
 ## 全局选项
 
@@ -228,7 +245,7 @@ npm link
 ```
 src/
 ├── commands/
-│   ├── agent/          # agent list/upload/download/delete
+│   ├── agent/          # agent list/get/upload/download/delete/version
 │   ├── skill/          # skill list/import/delete
 │   ├── session/        # session list/get/delete/logs/feedback
 │   └── config.ts       # config set/view, profile add/list/remove, use

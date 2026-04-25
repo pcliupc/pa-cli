@@ -55,12 +55,34 @@ describe("PaApiClient", () => {
     );
   });
 
-  it("throws on 409 with overwrite hint", async () => {
+  it("throws on 409 with generic conflict message", async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ error: "already exists" }), { status: 409 }),
     );
     await expect(client.postMultipart("/api/agents/upload", new FormData())).rejects.toThrow(
-      "--overwrite",
+      "Conflict",
+    );
+  });
+
+  it("posts JSON payloads with the expected headers", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+
+    await client.postJson("/api/agents/agent-1/versions/ver-2/publish", {
+      note: "publish",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:3000/api/agents/agent-1/versions/ver-2/publish",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer pa_test123",
+          "Content-Type": "application/json",
+        }),
+        body: JSON.stringify({ note: "publish" }),
+      }),
     );
   });
 

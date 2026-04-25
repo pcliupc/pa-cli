@@ -1,7 +1,7 @@
 ---
 name: pa-session
 version: 1.0.0
-description: "PA 会话管理：列出、查看详情、删除会话，获取运行日志、反馈，以及检查和下载 session workspace 里的生成文件。当用户需要查看会话列表、检查会话状态和阶段执行情况、查看运行日志（工具调用、推理记录）、分析智能体生成产物或下载 workspace 文件时触发。"
+description: "PA 会话管理：列出、查看详情、删除会话，获取运行日志、反馈，以及检查和下载 session workspace 里的生成文件。会话会绑定到具体 Agent 版本；当用户需要查看会话列表、检查会话状态和阶段执行情况、确认会话绑定的 Agent 版本、查看运行日志（工具调用、推理记录）、分析智能体生成产物或下载 workspace 文件时触发。"
 metadata:
 requires:
 bins: ["pa"]
@@ -15,10 +15,18 @@ cliHelp: "pa session --help"
 ## 核心概念
 
 - **会话（Session）**：用户与智能体的一次交互实例，包含多轮对话和阶段执行。
+- **绑定版本（Bound Agent Version）**：session 创建时选定的具体 Agent 版本；后续继续运行、恢复、排查时都以这个版本为准。
+- **当前发布版本（Current Published Version）**：创建新 session 时，如果没有显式指定版本，默认绑定逻辑 Agent 的当前发布版本。
 - **阶段（Stage）**：会话中的执行步骤，每个阶段有状态：`active`（进行中）、`completed`（已完成）、`pending`（待执行）。
 - **运行日志（Logs）**：会话执行过程中的工具调用、推理记录等结构化日志。
 - **反馈（Feedback）**：用户和管理员对会话结果的评价，包含多维度评分。
 - **Workspace 文件**：智能体在 session 工作区中生成的文件，可用于排查执行结果或下载做离线分析。不包含用户上传的 `assets/`。
+
+版本相关规则：
+
+- 每个 session 都绑定到一个具体的 Agent 版本。
+- 同一个逻辑 Agent 后续发布了新版本，不会影响已有 session 的执行结果和恢复行为。
+- 排查问题时，要同时看 `Agent` 和 `Version`，不要只看逻辑 Agent 名称。
 
 ## 命令参考
 
@@ -41,7 +49,12 @@ pa session list --page 2 --limit 10
 pa session list --output json
 ```
 
-输出列：ID、Agent、Title、Status、Updated
+输出列：ID、Agent、Version、Title、Status、Updated
+
+JSON 输出重点关注：
+
+- `agent_version_id`
+- `agent_version_number`
 
 底部分页信息：`Showing 1-20 of 83 (page 1/5)`
 
@@ -52,13 +65,18 @@ pa session get <session-id>
 ```
 
 输出包含：
-- 基本信息（标题、状态、智能体、创建/更新时间）
+- 基本信息（标题、状态、智能体、绑定版本、创建/更新时间）
 - 阶段执行状态列表（每个阶段的 label、status、关联技能）
 
 JSON 模式输出完整详情（含消息列表）：
 ```bash
 pa session get <session-id> --output json
 ```
+
+排查时优先确认：
+
+- 这个 session 绑定的是哪个 `agent_version_number`
+- 当前展示的阶段配置是否来自该绑定版本，而不是逻辑 Agent 的最新版本
 
 ### 删除会话
 
@@ -143,6 +161,8 @@ pa session workspace download <session-id> reports/summary.md --output json
 pa session list --agent demo
 ```
 
+如果该 Agent 已经发布过多个版本，先看 `Version` 列，再决定要排查哪一批 session。
+
 ### 排查会话执行问题
 
 ```bash
@@ -157,6 +177,12 @@ pa session workspace list <session-id>
 pa session workspace download <session-id> reports/summary.md
 ```
 
+重点检查：
+
+- 该 session 绑定的 Agent 版本
+- 该版本对应的阶段配置是否符合当时预期
+- 是否是后续新版本已修复，但旧 session 仍绑定在历史版本上
+
 ### 查看用户对会话的评价
 
 ```bash
@@ -168,3 +194,12 @@ pa session feedback <session-id>
 ```bash
 pa session delete <session-id> -f
 ```
+
+### 确认 session 绑定了哪个版本
+
+```bash
+pa session list --agent demo
+pa session get <session-id>
+```
+
+如果用户提到“为什么现在 Agent 行为和以前不一样”，先确认该 session 绑定的 `Version`，再去查看对应的 Agent 版本快照。

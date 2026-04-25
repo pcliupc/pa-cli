@@ -1,7 +1,7 @@
 ---
 name: pa-agent
 version: 1.0.0
-description: "PA 智能体管理：列出、查看配置、上传、下载、删除流程智能体。当用户需要查看智能体列表、获取智能体配置（config.yaml）、上传新智能体（yaml/zip/目录）、下载智能体配置、删除智能体时触发。"
+description: "PA 智能体管理：列出逻辑 Agent、查看当前发布版本配置、上传新 Agent 或新版本、查看/发布版本、下载、删除流程智能体。当用户需要查看智能体列表、获取智能体配置（config.yaml）、上传新智能体（yaml/zip/目录）、管理 Agent 版本、下载智能体配置、删除智能体时触发。"
 metadata:
 requires:
 bins: ["pa"]
@@ -14,9 +14,18 @@ cliHelp: "pa agent --help"
 
 ## 核心概念
 
-- **智能体（Agent）**：流程智能体，包含多个阶段（Stage），每个阶段可配置技能（Skill）。
+- **逻辑智能体（Logical Agent）**：稳定的 Agent 标识，下面可以包含多个不可变版本。
+- **智能体版本（Agent Version）**：某次上传生成的不可变运行快照，例如 `v1`、`v2`、`v3`。
+- **当前发布版本（Current Published Version）**：逻辑 Agent 当前默认给新 session 使用的版本。
 - **config.yaml**：智能体的配置文件，定义阶段、人设、MCP 服务器等。
 - **Private Skill**：智能体私有的技能，存储在智能体目录的 `skills/` 子目录中。
+
+版本语义规则：
+
+- 上传一个全新的 Agent，会创建一个新的逻辑 Agent，并生成首个版本 `v1`。
+- 向一个已存在的逻辑 Agent 再次上传，不会覆盖旧版本，而是创建新版本。
+- Session 总是绑定到创建时选中的具体版本，不会随着后续上传或重新发布而漂移。
+- 未显式指定版本时，平台默认使用该逻辑 Agent 的当前发布版本。
 
 ## 命令参考
 
@@ -36,21 +45,26 @@ pa agent list --category <category-id>
 pa agent list --output json
 ```
 
-输出列：ID、Name、Description、Active、Stages、Updated
+输出列：ID、Name、Description、Active、Current Version、Versions、Stages、Updated
 
-### 获取智能体配置
+JSON 输出重点关注：
 
-获取智能体的 config.yaml 原始内容（不包含私有技能和子智能体，仅配置文件本身）。
+- `current_version_number`
+- `version_count`
+
+### 获取当前发布版本配置
+
+获取逻辑 Agent 当前发布版本的 `config.yaml` 原始内容（不包含私有技能和子智能体，仅配置文件本身）。
 
 ```bash
-# 查看智能体配置
+# 查看当前发布版本配置
 pa agent get demo
 
 # JSON 格式输出
 pa agent get demo --output json
 ```
 
-如需获取完整的智能体包（含技能和子智能体），请使用 `pa agent download` 命令。
+如需查看某个具体版本的快照，请优先使用 `pa agent version get`。如需获取完整的智能体包（含技能和子智能体），请使用 `pa agent download` 命令。
 
 ### 上传智能体
 
@@ -66,9 +80,37 @@ pa agent upload ./agent-config.yaml
 # 上传 zip
 pa agent upload ./agent.zip
 
-# 覆盖同名智能体
-pa agent upload ./my-agent/ --overwrite
+# 给已有逻辑 Agent 创建新版本
+pa agent upload ./my-agent-v2/ --agent demo
 ```
+
+上传规则：
+
+- `pa agent upload <path>`：如果目标 Agent 不存在，创建新的逻辑 Agent 和 `v1`。
+- `pa agent upload <path> --agent <id>`：给已有逻辑 Agent 创建新版本。
+- 不再使用 `--overwrite` 作为 Agent 更新语义；旧版本保持不可变。
+
+### 管理智能体版本
+
+```bash
+# 列出某个逻辑 Agent 的全部版本
+pa agent version list demo
+
+# 查看某个版本的配置快照
+pa agent version get demo v2
+
+# 基于已有版本创建新版本
+pa agent version create demo --from v2 ./my-agent-v3/
+
+# 发布某个版本为当前默认版本
+pa agent version publish demo v3
+```
+
+版本命令适用场景：
+
+- 需要明确查看或核对某个历史版本时，用 `version get`
+- 需要从某个已知稳定版本继续演进时，用 `version create --from`
+- 需要切换新 session 默认版本时，用 `version publish`
 
 ### 下载智能体
 
@@ -104,6 +146,13 @@ pa agent list
 pa agent upload ./agents/my-new-agent/
 ```
 
+### 为已有智能体发布新版本
+
+```bash
+pa agent upload ./agents/demo-v2/ --agent demo
+pa agent version publish demo v2
+```
+
 ### 备份智能体
 
 ```bash
@@ -114,4 +163,10 @@ pa agent download demo -o ./backups/demo-$(date +%Y%m%d).zip
 
 ```bash
 pa agent get demo
+```
+
+### 查看某个历史版本的配置
+
+```bash
+pa agent version get demo v1
 ```

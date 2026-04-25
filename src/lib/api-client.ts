@@ -63,7 +63,7 @@ export class PaApiClient {
         );
       case 409:
         throw new ApiError(
-          `Resource already exists. Use --overwrite to replace. ${extractErrorMessage(body)}`,
+          `Conflict. ${extractErrorMessage(body)}`,
           409,
         );
       default:
@@ -108,6 +108,23 @@ export class PaApiClient {
         method: "POST",
         headers: this.headers(),
         body: formData,
+      });
+      await this.handleResponse(response);
+      return (await response.json()) as T;
+    } catch (err) {
+      throw wrapNetworkError(err, this.serverUrl);
+    }
+  }
+
+  async postJson<T = unknown>(apiPath: string, body?: unknown): Promise<T> {
+    try {
+      const response = await this.fetchFn(this.buildUrl(apiPath), {
+        method: "POST",
+        headers: {
+          ...this.headers(),
+          "Content-Type": "application/json",
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
       });
       await this.handleResponse(response);
       return (await response.json()) as T;

@@ -8,6 +8,8 @@ import { outputData, type OutputFormat } from "../../lib/output.js";
 interface SessionDetail {
   session_id: string;
   agent_id: string;
+  agent_version_id?: string | null;
+  agent_version_number?: string | null;
   title: string;
   status: string;
   current_stage_id: string | null;
@@ -46,6 +48,9 @@ export function registerSessionGetCommand(sessionCmd: Command): void {
         console.log(chalk.bold(`Session: ${session.title || session.session_id}`));
         console.log(`  ID:      ${session.session_id}`);
         console.log(`  Agent:   ${session.agent_id}`);
+        console.log(
+          `  Version: ${session.agent_version_number || "-"}${session.agent_version_id ? ` (${session.agent_version_id})` : ""}`,
+        );
         console.log(`  Status:  ${session.status}`);
         console.log(`  Created: ${session.created_at.slice(0, 19).replace("T", " ")}`);
         console.log(`  Updated: ${session.updated_at.slice(0, 19).replace("T", " ")}`);

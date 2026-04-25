@@ -7,6 +7,7 @@ import { outputData, type OutputFormat } from "../../lib/output.js";
 interface SessionListItem {
   session_id: string;
   agent_id: string;
+  agent_version_number?: string | null;
   title: string;
   status: string;
   updated_at: string;
@@ -59,10 +60,11 @@ export function registerSessionListCommand(sessionCmd: Command): void {
         outputData(
           sessions,
           outputFormat,
-          ["ID", "Agent", "Title", "Status", "Updated"],
+          ["ID", "Agent", "Version", "Title", "Status", "Updated"],
           sessions.map((s) => [
             s.session_id.slice(0, 12) + "...",
             s.agent_id,
+            s.agent_version_number || "-",
             (s.title || "").slice(0, 30),
             s.status,
             s.updated_at.slice(0, 10),

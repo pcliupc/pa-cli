@@ -1,74 +1,59 @@
 import { Command } from "commander";
 import ora from "ora";
 import chalk from "chalk";
-import fs from "node:fs";
-import path from "node:path";
 import { PaApiClient } from "../../lib/api-client.js";
 import { loadConfig } from "../../lib/config.js";
+import {
+  buildAgentUploadFormData,
+  resolveAndValidateInputPath,
+} from "./upload-shared.js";
 
 interface UploadResult {
   agent_id: string;
   name?: string;
-  status: "created" | "updated";
+  status: "created" | "version_created";
   message?: string;
+  version_number?: string;
+  current_version_number?: string;
 }
 
 export function registerAgentUploadCommand(agentCmd: Command): void {
   agentCmd
     .command("upload")
-    .description("Upload an agent (yaml, zip, or directory)")
+    .description("Upload a new agent or create a new version for an existing agent")
     .argument("<path>", "Path to config.yaml, .zip file, or agent directory")
-    .option("--overwrite", "Overwrite existing agent with same ID")
-    .action(async (inputPath: string, options: { overwrite?: boolean }) => {
+    .option("--agent <id>", "Append a new version to an existing logical agent")
+    .option("--from <version>", "Record the source version ID or version number")
+    .option("--publish", "Set the uploaded version as the current published version")
+    .action(async (inputPath: string, options: { agent?: string; from?: string; publish?: boolean }) => {
       const config = loadConfig();
+      const parentOpts = agentCmd.parent?.opts?.() as { server?: string } | undefined;
       const client = new PaApiClient({
-        serverUrl: config.serverUrl,
+        serverUrl: parentOpts?.server ?? config.serverUrl,
         apiKey: config.apiKey,
       });
 
-      const resolvedPath = path.resolve(inputPath);
-      if (!fs.existsSync(resolvedPath)) {
-        console.error(chalk.red(`Error: Path not found: ${resolvedPath}`));
+      if (options.from && !options.agent) {
+        console.error(chalk.red("Error: --from can only be used together with --agent."));
+        process.exit(1);
+      }
+
+      try {
+        resolveAndValidateInputPath(inputPath);
+      } catch (err) {
+        console.error(
+          chalk.red(`Error: ${err instanceof Error ? err.message : String(err)}`),
+        );
         process.exit(1);
       }
 
       const spinner = ora("Uploading agent...").start();
       try {
-        const formData = new FormData();
-
-        const stat = fs.statSync(resolvedPath);
-        if (stat.isFile()) {
-          const ext = path.extname(resolvedPath).toLowerCase();
-          if (ext !== ".yaml" && ext !== ".yml" && ext !== ".zip") {
-            spinner.stop();
-            console.error(
-              chalk.red(
-                "Error: Unsupported file type. Use .yaml, .yml, or .zip files.",
-              ),
-            );
-            process.exit(1);
-          }
-          const buffer = fs.readFileSync(resolvedPath);
-          const fileName = path.basename(resolvedPath);
-          formData.append("file", new Blob([buffer]), fileName);
-        } else if (stat.isDirectory()) {
-          const files = walkDir(resolvedPath);
-          if (files.length === 0) {
-            spinner.stop();
-            console.error(chalk.red("Error: Directory is empty."));
-            process.exit(1);
-          }
-          for (const filePath of files) {
-            const buffer = fs.readFileSync(filePath);
-            const relativePath = path.relative(resolvedPath, filePath);
-            formData.append("files[]", new Blob([buffer]), relativePath);
-            formData.append("paths[]", relativePath);
-          }
-        }
-
-        if (options.overwrite) {
-          formData.append("overwrite", "true");
-        }
+        const formData = buildAgentUploadFormData(inputPath, {
+          targetAgentId: options.agent,
+          sourceVersionId: options.from,
+          publish: options.agent ? options.publish === true : undefined,
+        });
 
         const result = await client.postMultipart<UploadResult>(
           "/api/agents/upload",
@@ -76,9 +61,15 @@ export function registerAgentUploadCommand(agentCmd: Command): void {
         );
 
         spinner.stop();
+        const versionText =
+          result.version_number && result.current_version_number
+            ? `, new version ${result.version_number}, current ${result.current_version_number}`
+            : result.version_number
+              ? `, version ${result.version_number}`
+              : "";
         console.log(
           chalk.green(
-            `✓ Agent "${result.agent_id}" uploaded successfully (${result.status})`,
+            `✓ Agent "${result.agent_id}" uploaded successfully (${result.status}${versionText})`,
           ),
         );
       } catch (err) {
@@ -91,19 +82,4 @@ export function registerAgentUploadCommand(agentCmd: Command): void {
         process.exit(1);
       }
     });
-}
-
-function walkDir(dir: string): string[] {
-  const results: string[] = [];
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.name.startsWith(".")) continue;
-    if (entry.isDirectory()) {
-      results.push(...walkDir(fullPath));
-    } else if (entry.isFile()) {
-      results.push(fullPath);
-    }
-  }
-  return results;
 }

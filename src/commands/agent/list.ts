@@ -10,6 +10,8 @@ interface AgentListItem {
   description: string;
   isActive: boolean;
   stage_count: number;
+  current_version_number?: string | null;
+  version_count?: number;
   updatedAt: string;
 }
 
@@ -96,12 +98,14 @@ export function registerAgentListCommand(agentCmd: Command): void {
         outputData(
           agents,
           outputFormat,
-          ["ID", "Name", "Description", "Active", "Stages", "Updated"],
+          ["ID", "Name", "Description", "Active", "Current Version", "Versions", "Stages", "Updated"],
           agents.map((a) => [
             a.agent_id,
             a.name,
             (a.description || "").slice(0, 30),
             a.isActive ? "✓" : "✗",
+            a.current_version_number || "-",
+            String(a.version_count ?? 0),
             String(a.stage_count),
             a.updatedAt.slice(0, 10),
           ]),

@@ -41,6 +41,8 @@ function buildAgent(
     description: string;
     isActive: boolean;
     stage_count: number;
+    current_version_number: string | null;
+    version_count: number;
     updatedAt: string;
   }> = {},
 ) {
@@ -50,6 +52,8 @@ function buildAgent(
     description: overrides.description ?? `Description for ${id}`,
     isActive: overrides.isActive ?? true,
     stage_count: overrides.stage_count ?? 2,
+    current_version_number: overrides.current_version_number ?? "v2",
+    version_count: overrides.version_count ?? 2,
     updatedAt: overrides.updatedAt ?? "2026-04-22T10:00:00.000Z",
   };
 }
@@ -110,7 +114,7 @@ describe("agent list command", () => {
         buildAgent("agent-5"),
       ],
       "table",
-      ["ID", "Name", "Description", "Active", "Stages", "Updated"],
+      ["ID", "Name", "Description", "Active", "Current Version", "Versions", "Stages", "Updated"],
       expect.any(Array),
     );
     expect(spinnerStopMock).toHaveBeenCalledTimes(1);
@@ -128,7 +132,7 @@ describe("agent list command", () => {
     expect(outputDataMock).toHaveBeenCalledWith(
       [buildAgent("agent-1")],
       "table",
-      ["ID", "Name", "Description", "Active", "Stages", "Updated"],
+      ["ID", "Name", "Description", "Active", "Current Version", "Versions", "Stages", "Updated"],
       expect.any(Array),
     );
   });
@@ -142,7 +146,7 @@ describe("agent list command", () => {
     expect(outputDataMock).toHaveBeenCalledWith(
       [buildAgent("agent-1"), buildAgent("agent-2")],
       "table",
-      ["ID", "Name", "Description", "Active", "Stages", "Updated"],
+      ["ID", "Name", "Description", "Active", "Current Version", "Versions", "Stages", "Updated"],
       expect.any(Array),
     );
   });
@@ -181,7 +185,7 @@ describe("agent list command", () => {
     expect(outputDataMock).toHaveBeenCalledWith(
       [buildAgent("agent-1")],
       "json",
-      ["ID", "Name", "Description", "Active", "Stages", "Updated"],
+      ["ID", "Name", "Description", "Active", "Current Version", "Versions", "Stages", "Updated"],
       expect.any(Array),
     );
   });

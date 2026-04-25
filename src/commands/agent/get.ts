@@ -8,7 +8,7 @@ import { type OutputFormat } from "../../lib/output.js";
 export function registerAgentGetCommand(agentCmd: Command): void {
   agentCmd
     .command("get")
-    .description("Get agent config.yaml content")
+    .description("Get the current published version config.yaml content")
     .argument("<id>", "Agent ID")
     .action(async (agentId: string) => {
       const config = loadConfig();

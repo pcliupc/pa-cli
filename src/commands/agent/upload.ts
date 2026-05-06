@@ -25,7 +25,8 @@ export function registerAgentUploadCommand(agentCmd: Command): void {
     .option("--agent <id>", "Append a new version to an existing logical agent")
     .option("--from <version>", "Record the source version ID or version number")
     .option("--publish", "Set the uploaded version as the current published version")
-    .action(async (inputPath: string, options: { agent?: string; from?: string; publish?: boolean }) => {
+    .option("--space <id>", "Upload to specific space")
+    .action(async (inputPath: string, options: { agent?: string; from?: string; publish?: boolean; space?: string }) => {
       const config = loadConfig();
       const parentOpts = agentCmd.parent?.opts?.() as { server?: string } | undefined;
       const client = new PaApiClient({
@@ -53,6 +54,7 @@ export function registerAgentUploadCommand(agentCmd: Command): void {
           targetAgentId: options.agent,
           sourceVersionId: options.from,
           publish: options.agent ? options.publish === true : undefined,
+          spaceId: options.space,
         });
 
         const result = await client.postMultipart<UploadResult>(

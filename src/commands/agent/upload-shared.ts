@@ -15,6 +15,7 @@ export function buildAgentUploadFormData(
     targetAgentId?: string;
     sourceVersionId?: string;
     publish?: boolean;
+    spaceId?: string;
   } = {},
 ): FormData {
   const resolvedPath = resolveAndValidateInputPath(inputPath);
@@ -29,6 +30,9 @@ export function buildAgentUploadFormData(
   }
   if (typeof options.publish === "boolean") {
     formData.append("publish", options.publish ? "true" : "false");
+  }
+  if (options.spaceId) {
+    formData.append("space_id", options.spaceId);
   }
 
   if (stat.isFile()) {

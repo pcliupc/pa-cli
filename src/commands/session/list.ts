@@ -28,7 +28,8 @@ export function registerSessionListCommand(sessionCmd: Command): void {
     .option("--scope <scope>", "Scope: self or all (default: self)", "self")
     .option("--page <n>", "Page number (default: 1)", "1")
     .option("--limit <n>", "Page size (default: 20)", "20")
-    .action(async (options: { agent?: string; scope?: string; page?: string; limit?: string }) => {
+    .option("--space <id>", "Filter by space ID")
+    .action(async (options: { agent?: string; scope?: string; page?: string; limit?: string; space?: string }) => {
       const config = loadConfig();
       const parentOpts = sessionCmd.parent?.opts?.() as { output?: string; server?: string } | undefined;
       const serverUrl = parentOpts?.server ?? config.serverUrl;
@@ -43,6 +44,7 @@ export function registerSessionListCommand(sessionCmd: Command): void {
         if (options.scope) params.set("scope", options.scope);
         if (options.page) params.set("page", options.page);
         if (options.limit) params.set("pageSize", options.limit);
+        if (options.space) params.set("spaceId", options.space);
         const qs = params.toString();
 
         const resp = await client.getJson<SessionListResponse>(

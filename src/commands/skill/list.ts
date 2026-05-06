@@ -13,6 +13,10 @@ interface SkillListItem {
   updatedAt: string;
 }
 
+interface SkillListResponse {
+  items: SkillListItem[];
+}
+
 export function registerSkillListCommand(skillCmd: Command): void {
   skillCmd
     .command("list")
@@ -40,9 +44,10 @@ export function registerSkillListCommand(skillCmd: Command): void {
         if (options.search) params.set("search", options.search);
         if (options.space) params.set("spaceId", options.space);
         const qs = params.toString();
-        const skills = await client.getJson<SkillListItem[]>(
+        const resp = await client.getJson<SkillListItem[] | SkillListResponse>(
           `/api/skills${qs ? `?${qs}` : ""}`,
         );
+        const skills = Array.isArray(resp) ? resp : resp.items;
 
         spinner.stop();
 

@@ -19,10 +19,11 @@ export function registerSkillImportCommand(skillCmd: Command): void {
     .option("--overwrite", "Overwrite existing skill with same name")
     .option("--category <category>", "Category (default: utility)")
     .option("--tags <tags>", "Comma-separated tags")
+    .option("--space <id>", "Import to specific space")
     .action(
       async (
         inputPath: string,
-        options: { overwrite?: boolean; category?: string; tags?: string },
+        options: { overwrite?: boolean; category?: string; tags?: string; space?: string },
       ) => {
         const config = loadConfig();
         const client = new PaApiClient({
@@ -46,6 +47,9 @@ export function registerSkillImportCommand(skillCmd: Command): void {
           }
           if (options.tags) {
             formData.append("tags", options.tags);
+          }
+          if (options.space) {
+            formData.append("spaceId", options.space);
           }
 
           const stat = fs.statSync(resolvedPath);

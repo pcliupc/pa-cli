@@ -108,8 +108,8 @@ pa agent version publish demo v3           # 切换当前发布版本
 pa agent download demo                     # 下载为 demo.zip
 pa agent download demo -o ./demo.zip       # 指定输出路径
 
-pa agent delete demo                       # 需确认
-pa agent delete demo -f                    # 跳过确认
+pa agent delete demo                       # 需确认；若已有历史会话则会停用而非彻底删除
+pa agent delete demo -f                    # 跳过确认；删除或停用取决于是否已有会话
 ```
 
 ### 技能管理

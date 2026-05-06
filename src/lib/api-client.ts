@@ -99,6 +99,21 @@ export class PaApiClient {
     }
   }
 
+  async deleteJson<T = unknown>(apiPath: string): Promise<T> {
+    try {
+      const response = await this.fetchFn(this.buildUrl(apiPath), {
+        method: "DELETE",
+        headers: this.headers(),
+      });
+      await this.handleResponse(response);
+
+      const body = await response.text();
+      return (body ? JSON.parse(body) : {}) as T;
+    } catch (err) {
+      throw wrapNetworkError(err, this.serverUrl);
+    }
+  }
+
   async postMultipart<T = unknown>(
     apiPath: string,
     formData: FormData,

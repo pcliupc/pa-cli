@@ -5,6 +5,14 @@ import readline from "node:readline";
 import { PaApiClient } from "../../lib/api-client.js";
 import { loadConfig } from "../../lib/config.js";
 
+interface DeleteAgentResponse {
+  status?: "deleted" | "disabled";
+  reason?: string;
+  sessionCount?: number;
+  liveArtifactCount?: number;
+  message?: string;
+}
+
 export function registerAgentDeleteCommand(agentCmd: Command): void {
   agentCmd
     .command("delete")
@@ -28,9 +36,22 @@ export function registerAgentDeleteCommand(agentCmd: Command): void {
 
       const spinner = ora(`Deleting agent "${agentId}"...`).start();
       try {
-        await client.delete(`/api/agents/${agentId}`);
+        const result = await client.deleteJson<DeleteAgentResponse>(`/api/agents/${agentId}`);
         spinner.stop();
-        console.log(chalk.green(`✓ Agent "${agentId}" deleted`));
+        if (result.status === "disabled") {
+          const details = [
+            typeof result.sessionCount === "number" ? `${result.sessionCount} sessions` : null,
+            typeof result.liveArtifactCount === "number"
+              ? `${result.liveArtifactCount} live artifacts kept`
+              : null,
+          ].filter(Boolean);
+          const suffix = details.length > 0 ? ` (${details.join(", ")})` : "";
+          console.log(
+            chalk.yellow(`! Agent "${agentId}" disabled because sessions exist${suffix}`),
+          );
+        } else {
+          console.log(chalk.green(`✓ Agent "${agentId}" deleted`));
+        }
       } catch (err) {
         spinner.stop();
         console.error(

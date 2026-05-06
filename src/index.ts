@@ -6,6 +6,7 @@ import { registerAgentCommands } from "./commands/agent/index.js";
 import { registerSkillCommands } from "./commands/skill/index.js";
 import { registerSessionCommands } from "./commands/session/index.js";
 import { registerSkillsCommand } from "./commands/skills-install.js";
+import { registerSpaceCommands } from "./commands/space/index.js";
 
 const packageJson = JSON.parse(
   fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -25,5 +26,6 @@ registerAgentCommands(program);
 registerSkillCommands(program);
 registerSessionCommands(program);
 registerSkillsCommand(program);
+registerSpaceCommands(program);
 
 program.parse();

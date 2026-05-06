@@ -19,7 +19,8 @@ export function registerSkillListCommand(skillCmd: Command): void {
     .description("List all skills")
     .option("--category <category>", "Filter by category")
     .option("--search <keyword>", "Search by keyword")
-    .action(async (options: { category?: string; search?: string }) => {
+    .option("--space <id>", "Filter by space ID")
+    .action(async (options: { category?: string; search?: string; space?: string }) => {
       const config = loadConfig();
       const parentOpts = skillCmd.parent?.parent?.opts?.() as
         | { output?: string; server?: string }
@@ -37,6 +38,7 @@ export function registerSkillListCommand(skillCmd: Command): void {
         const params = new URLSearchParams();
         if (options.category) params.set("category", options.category);
         if (options.search) params.set("search", options.search);
+        if (options.space) params.set("spaceId", options.space);
         const qs = params.toString();
         const skills = await client.getJson<SkillListItem[]>(
           `/api/skills${qs ? `?${qs}` : ""}`,

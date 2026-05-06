@@ -203,6 +203,31 @@ describe("agent list command", () => {
     expect(outputDataMock).not.toHaveBeenCalled();
   });
 
+  it("passes spaceId as query param when --space is provided", async () => {
+    getJsonMock.mockResolvedValueOnce({
+      items: [buildAgent("agent-1")],
+      pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+    });
+
+    await runAgentList(["agent", "list", "--space", "space-abc-123"]);
+
+    expect(getJsonMock).toHaveBeenCalledWith(
+      "/api/agents?spaceId=space-abc-123",
+    );
+  });
+
+  it("does not pass spaceId when --space is not provided", async () => {
+    getJsonMock.mockResolvedValueOnce({
+      items: [],
+      pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 },
+    });
+
+    await runAgentList(["agent", "list"]);
+
+    const calledUrl = getJsonMock.mock.calls[0][0] as string;
+    expect(calledUrl).not.toContain("spaceId");
+  });
+
   it("exits with an error when a paginated request fails", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const exitSpy = vi

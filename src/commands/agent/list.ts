@@ -70,7 +70,8 @@ export function registerAgentListCommand(agentCmd: Command): void {
     .description("List all agents")
     .option("--all", "Include inactive agents")
     .option("--category <id>", "Filter by category")
-    .action(async (options: { all?: boolean; category?: string }) => {
+    .option("--space <id>", "Filter by space ID")
+    .action(async (options: { all?: boolean; category?: string; space?: string }) => {
       const config = loadConfig();
       const parentOpts = agentCmd.parent?.opts?.() as { output?: string; server?: string } | undefined;
       const serverUrl = parentOpts?.server ?? config.serverUrl;
@@ -86,6 +87,7 @@ export function registerAgentListCommand(agentCmd: Command): void {
         const params = new URLSearchParams();
         if (options.all) params.set("all", "true");
         if (options.category) params.set("category", options.category);
+        if (options.space) params.set("spaceId", options.space);
         const agents = await fetchAllAgents(client, params);
 
         spinner.stop();

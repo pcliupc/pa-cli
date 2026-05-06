@@ -7,6 +7,7 @@ import { registerSkillCommands } from "./commands/skill/index.js";
 import { registerSessionCommands } from "./commands/session/index.js";
 import { registerSkillsCommand } from "./commands/skills-install.js";
 import { registerSpaceCommands } from "./commands/space/index.js";
+import { registerMcpCommands } from "./commands/mcp/index.js";
 
 const packageJson = JSON.parse(
   fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -27,5 +28,6 @@ registerSkillCommands(program);
 registerSessionCommands(program);
 registerSkillsCommand(program);
 registerSpaceCommands(program);
+registerMcpCommands(program);
 
 program.parse();

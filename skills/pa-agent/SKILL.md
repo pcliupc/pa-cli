@@ -41,6 +41,9 @@ pa agent list --all
 # 按分类过滤
 pa agent list --category <category-id>
 
+# 按空间过滤
+pa agent list --space <space-id>
+
 # JSON 格式输出
 pa agent list --output json
 ```
@@ -82,12 +85,16 @@ pa agent upload ./agent.zip
 
 # 给已有逻辑 Agent 创建新版本
 pa agent upload ./my-agent-v2/ --agent demo
+
+# 上传到指定空间
+pa agent upload ./my-agent/ --space <space-id>
 ```
 
 上传规则：
 
 - `pa agent upload <path>`：如果目标 Agent 不存在，创建新的逻辑 Agent 和 `v1`。
 - `pa agent upload <path> --agent <id>`：给已有逻辑 Agent 创建新版本。
+- `--space <id>`：可选，将 Agent 上传到指定空间。不指定时上传到默认空间。
 - 不再使用 `--overwrite` 作为 Agent 更新语义；旧版本保持不可变。
 
 ### 管理智能体版本

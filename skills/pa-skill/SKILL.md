@@ -32,6 +32,9 @@ pa skill list --search "PDF"
 # 按分类过滤
 pa skill list --category utility
 
+# 按空间过滤
+pa skill list --space <space-id>
+
 # JSON 格式输出
 pa skill list --output json
 ```
@@ -54,6 +57,9 @@ pa skill import ./my-skill/ --overwrite
 
 # 设置分类和标签
 pa skill import ./my-skill/ --category ai --tags "pdf,document,generation"
+
+# 导入到指定空间
+pa skill import ./my-skill/ --space <space-id>
 ```
 
 ### 删除技能

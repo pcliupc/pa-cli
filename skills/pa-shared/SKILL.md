@@ -84,13 +84,21 @@ pa agent list --output json
 pa session list --output json --page 1 --limit 10
 ```
 
+## 核心概念：空间（Space）
+
+- **空间（Space）**：平台资源的业务边界和隔离单元。Agent、Skill、MCP Server、Session 等资源都归属于某个空间。
+- **默认空间（Default Space）**：所有用户都有默认空间。未指定 `--space` 时，写入操作（upload、import、create）默认将资源放入默认空间。
+- **跨空间访问**：`list` 命令不指定 `--space` 时，返回用户可访问的所有空间中的资源。
+- **空间角色**：用户在空间中拥有不同角色（MEMBER、AGENT_EDITOR、SPACE_ADMIN），角色决定可执行的操作权限。
+- **`--space <id>` 选项**：多个命令支持此选项来按空间过滤或指定目标空间，详见各具体 skill。
+
 ## 命令结构
 
 ```
 pa <resource> <action> [options] [arguments]
 
-resource: agent | skill | session | config
-action:   list | get | upload | download | delete | import | logs | feedback
+resource: agent | skill | session | space | mcp | config
+action:   list | get | upload | download | delete | import | create | logs | feedback
           workspace list | workspace download
 ```
 

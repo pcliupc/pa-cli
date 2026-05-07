@@ -39,6 +39,9 @@ pa session list
 # 按智能体过滤
 pa session list --agent demo
 
+# 按空间过滤
+pa session list --space <space-id>
+
 # 查看所有用户的会话（需管理员）
 pa session list --scope all --agent demo
 

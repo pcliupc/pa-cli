@@ -148,6 +148,23 @@ export class PaApiClient {
     }
   }
 
+  async patchJson<T = unknown>(apiPath: string, body?: unknown): Promise<T> {
+    try {
+      const response = await this.fetchFn(this.buildUrl(apiPath), {
+        method: "PATCH",
+        headers: {
+          ...this.headers(),
+          "Content-Type": "application/json",
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      await this.handleResponse(response);
+      return (await response.json()) as T;
+    } catch (err) {
+      throw wrapNetworkError(err, this.serverUrl);
+    }
+  }
+
   async downloadFile(apiPath: string, outputPath: string): Promise<void> {
     try {
       const response = await this.fetchFn(this.buildUrl(apiPath), {

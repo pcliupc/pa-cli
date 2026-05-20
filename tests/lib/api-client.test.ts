@@ -86,6 +86,27 @@ describe("PaApiClient", () => {
     );
   });
 
+  it("sends PATCH request with JSON body", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ updated: true }), { status: 200 }),
+    );
+
+    const result = await client.patchJson("/api/test", { status: "archived" });
+
+    expect(result).toEqual({ updated: true });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:3000/api/test",
+      expect.objectContaining({
+        method: "PATCH",
+        headers: expect.objectContaining({
+          Authorization: "Bearer pa_test123",
+          "Content-Type": "application/json",
+        }),
+        body: JSON.stringify({ status: "archived" }),
+      }),
+    );
+  });
+
   it("handles network errors", async () => {
     fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
     await expect(client.getJson("/api/agents")).rejects.toThrow(

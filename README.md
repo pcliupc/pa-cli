@@ -68,6 +68,7 @@ apiKey:    pa_st*********key
 pa agent list
 pa skill list
 pa session list
+pa live-artifact list
 ```
 
 ### 多环境 Profile 管理
@@ -164,6 +165,38 @@ pa session delete <id> -f                  # 跳过确认
 
 `session workspace` 仅暴露智能体在 session workspace 中生成的文件，不包含用户上传的 `assets/` 内容。
 
+### Live Artifact 管理
+
+```bash
+pa live-artifact list                              # 列出所有 live artifact（自动分页）
+pa live-artifact list --space <id>                 # 按空间过滤
+pa live-artifact list --status published           # 按状态过滤（published/archived/all）
+pa live-artifact list --scope all                  # 查看所有用户（需管理员）
+pa live-artifact list --search "关键词"            # 按标题搜索
+pa live-artifact list --output json                # JSON 格式输出
+
+pa live-artifact get <id>                          # 查看详情
+
+pa live-artifact publish --session <id> --dir <path>
+                                                   # 从 session workspace 发布
+pa live-artifact publish --session <id> --dir build/app --title "My App"
+                                                   # 指定标题
+
+pa live-artifact update <id> --status archived     # 修改状态
+pa live-artifact update <id> --title "New Title"   # 修改标题
+
+pa live-artifact refresh <id>                      # 重新构建 bundle
+
+pa live-artifact delete <id>                       # 需确认
+pa live-artifact delete <id> -f                    # 跳过确认
+
+pa live-artifact source-docs <id> list              # 列出 source documents
+pa live-artifact source-docs <id> add --path <path> # 添加 source document
+pa live-artifact source-docs <id> remove <docId>    # 移除 source document
+```
+
+Live Artifact 支持 html-app（HTML Bundle）和 course（Markdown Flow）两种类型，类型由 bundle 目录中的 `manifest.json` 自动决定，CLI 命令无需区分。
+
 ## Agent 版本模型
 
 - `pa_agents` 是逻辑 Agent，一个逻辑 Agent 下面可以有多个不可变版本。
@@ -248,6 +281,7 @@ src/
 │   ├── agent/          # agent list/get/upload/download/delete/version
 │   ├── skill/          # skill list/import/delete
 │   ├── session/        # session list/get/delete/logs/feedback
+│   ├── live-artifact/  # live-artifact list/get/publish/update/refresh/delete/source-docs
 │   └── config.ts       # config set/view, profile add/list/remove, use
 ├── lib/
 │   ├── api-client.ts   # HTTP 客户端（认证、错误处理、文件上传下载）

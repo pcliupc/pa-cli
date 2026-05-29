@@ -321,4 +321,19 @@ describe("setConfigValue with profiles", () => {
     const prodConfig = loadConfig(dir);
     expect(prodConfig.serverUrl).toBe("https://prod.example.com");
   });
+
+  it("stores optional service log query configuration in the active profile", () => {
+    addProfile(
+      { name: "local", serverUrl: "http://localhost:3000", apiKey: "key" },
+      dir,
+    );
+    useProfile("local", dir);
+
+    setConfigValue("localLogRoot", "/tmp/pa-logs", dir);
+    setConfigValue("slsProject", "pa-prod", dir);
+
+    const config = loadConfig(dir);
+    expect(config.localLogRoot).toBe("/tmp/pa-logs");
+    expect(config.slsProject).toBe("pa-prod");
+  });
 });

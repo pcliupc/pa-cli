@@ -9,6 +9,7 @@ import { registerSkillsCommand } from "./commands/skills-install.js";
 import { registerSpaceCommands } from "./commands/space/index.js";
 import { registerMcpCommands } from "./commands/mcp/index.js";
 import { registerLiveArtifactCommands } from "./commands/live-artifact/index.js";
+import { registerLogsCommands } from "./commands/logs/index.js";
 
 const packageJson = JSON.parse(
   fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -31,5 +32,6 @@ registerSkillsCommand(program);
 registerSpaceCommands(program);
 registerMcpCommands(program);
 registerLiveArtifactCommands(program);
+registerLogsCommands(program);
 
 program.parse();

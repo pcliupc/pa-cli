@@ -5,6 +5,11 @@ import os from "node:os";
 export interface PaConfig {
   serverUrl: string;
   apiKey: string;
+  localLogRoot?: string;
+  slsProject?: string;
+  slsWebLogstore?: string;
+  slsRuntimeLogstore?: string;
+  aliyunProfile?: string;
 }
 
 export interface PaProfile extends PaConfig {
@@ -156,6 +161,11 @@ export function loadConfig(configDir?: string): PaConfig {
   return {
     serverUrl: profileConfig.serverUrl ?? "http://localhost:3000",
     apiKey: profileConfig.apiKey ?? "",
+    localLogRoot: profileConfig.localLogRoot,
+    slsProject: profileConfig.slsProject,
+    slsWebLogstore: profileConfig.slsWebLogstore,
+    slsRuntimeLogstore: profileConfig.slsRuntimeLogstore,
+    aliyunProfile: profileConfig.aliyunProfile,
   };
 }
 
@@ -184,9 +194,19 @@ export function setConfigValue(
     profileConfig.serverUrl = value;
   } else if (key === "apiKey") {
     profileConfig.apiKey = value;
+  } else if (key === "localLogRoot") {
+    profileConfig.localLogRoot = value;
+  } else if (key === "slsProject") {
+    profileConfig.slsProject = value;
+  } else if (key === "slsWebLogstore") {
+    profileConfig.slsWebLogstore = value;
+  } else if (key === "slsRuntimeLogstore") {
+    profileConfig.slsRuntimeLogstore = value;
+  } else if (key === "aliyunProfile") {
+    profileConfig.aliyunProfile = value;
   } else {
     throw new Error(
-      `Unknown config key: "${key}". Supported keys: serverUrl, apiKey`,
+      `Unknown config key: "${key}". Supported keys: serverUrl, apiKey, localLogRoot, slsProject, slsWebLogstore, slsRuntimeLogstore, aliyunProfile`,
     );
   }
 
@@ -228,7 +248,15 @@ export function addProfile(
 
   writeProfileFile(
     profile.name,
-    { serverUrl: profile.serverUrl, apiKey: profile.apiKey },
+    {
+      serverUrl: profile.serverUrl,
+      apiKey: profile.apiKey,
+      localLogRoot: profile.localLogRoot,
+      slsProject: profile.slsProject,
+      slsWebLogstore: profile.slsWebLogstore,
+      slsRuntimeLogstore: profile.slsRuntimeLogstore,
+      aliyunProfile: profile.aliyunProfile,
+    },
     configDir,
   );
 

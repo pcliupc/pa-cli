@@ -27,13 +27,31 @@ export function registerConfigCommand(program: Command): void {
     console.log(
       `apiKey:    ${maskApiKey(config.apiKey) || chalk.gray("(not set)")}`,
     );
+    if (config.localLogRoot) {
+      console.log(`localLogRoot: ${config.localLogRoot}`);
+    }
+    if (config.slsProject) {
+      console.log(`slsProject: ${config.slsProject}`);
+    }
+    if (config.slsWebLogstore) {
+      console.log(`slsWebLogstore: ${config.slsWebLogstore}`);
+    }
+    if (config.slsRuntimeLogstore) {
+      console.log(`slsRuntimeLogstore: ${config.slsRuntimeLogstore}`);
+    }
+    if (config.aliyunProfile) {
+      console.log(`aliyunProfile: ${config.aliyunProfile}`);
+    }
   });
 
   // config set <key> <value>
   configCmd
     .command("set")
     .description("Set a configuration value in the active profile")
-    .argument("<key>", "Config key (serverUrl or apiKey)")
+    .argument(
+      "<key>",
+      "Config key (serverUrl, apiKey, localLogRoot, slsProject, slsWebLogstore, slsRuntimeLogstore, aliyunProfile)",
+    )
     .argument("<value>", "Config value")
     .action((key: string, value: string) => {
       try {

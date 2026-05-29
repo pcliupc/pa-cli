@@ -2,7 +2,10 @@ import { Command } from "commander";
 import chalk from "chalk";
 import ora from "ora";
 import { loadConfig } from "../../lib/config.js";
-import { queryLocalLogs } from "../../lib/local-log-query.js";
+import {
+  hasLocalLogSource,
+  queryLocalLogs,
+} from "../../lib/local-log-query.js";
 import {
   renderServiceLogLine,
   type LogQueryOptions,
@@ -10,6 +13,7 @@ import {
   type ServiceLogScope,
 } from "../../lib/log-query.js";
 import { type OutputFormat } from "../../lib/output.js";
+import { hasSlsLogSource, querySlsLogs } from "../../lib/sls-log-query.js";
 
 interface RawLogQueryCommandOptions {
   service?: string;
@@ -97,14 +101,27 @@ function buildQueryOptions(
 
 async function runQuery(
   query: LogQueryOptions,
-): Promise<ReturnType<typeof queryLocalLogs>> {
+): Promise<Awaited<ReturnType<typeof queryLocalLogs>>> {
   const config = loadConfig();
+  const cwd = process.cwd();
 
-  if (query.source === "sls") {
-    throw new Error("SLS log query is not available yet. Use --source local.");
+  if (query.source === "local") {
+    return queryLocalLogs(query, config, cwd);
   }
 
-  return queryLocalLogs(query, config);
+  if (query.source === "sls") {
+    return querySlsLogs(query, config);
+  }
+
+  if (hasLocalLogSource(config, query.service, cwd)) {
+    return queryLocalLogs(query, config, cwd);
+  }
+
+  if (hasSlsLogSource(config, query.service)) {
+    return querySlsLogs(query, config);
+  }
+
+  return queryLocalLogs(query, config, cwd);
 }
 
 export function registerLogsQueryCommand(logsCmd: Command): void {

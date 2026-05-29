@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { Command } from "commander";
 import { registerLogsCommands } from "../../src/commands/logs/index.js";
 
@@ -19,5 +19,35 @@ describe("logs query command", () => {
       queryCommand?.options.find((entry) => entry.long === "--source")
         ?.defaultValue,
     ).toBe("auto");
+  });
+
+  it("uses aliyunlog when source=sls and config provides SLS metadata", async () => {
+    const mod = await import("../../src/lib/sls-log-query.js");
+    const run = vi.fn().mockResolvedValue({
+      stdout: JSON.stringify({
+        data: [{ service: "runtime", level: "ERROR", event: "runtime.failed" }],
+      }),
+      stderr: "",
+    });
+
+    const entries = await mod.querySlsLogs(
+      {
+        source: "sls",
+        service: "runtime",
+        since: "1h",
+        limit: 50,
+      },
+      {
+        serverUrl: "http://localhost:3000",
+        apiKey: "key",
+        slsProject: "pa-prod",
+        slsRuntimeLogstore: "runtime-logs",
+        aliyunProfile: "default",
+      },
+      run,
+    );
+
+    expect(run).toHaveBeenCalled();
+    expect(entries[0]?.service).toBe("runtime");
   });
 });

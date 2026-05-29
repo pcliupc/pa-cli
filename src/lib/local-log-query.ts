@@ -20,6 +20,29 @@ function resolveCandidateRoots(config: PaConfig, cwd: string): string[] {
   return [...new Set(candidates.map((entry) => path.resolve(entry)))];
 }
 
+export function hasLocalLogSource(
+  config: PaConfig,
+  service: ServiceLogName | "all",
+  cwd: string = process.cwd(),
+): boolean {
+  const roots = resolveCandidateRoots(config, cwd);
+  const services: ServiceLogName[] =
+    service === "all" ? ["web", "runtime"] : [service];
+
+  return roots.some((root) =>
+    services.some((name) => {
+      const serviceDir = path.join(root, name);
+      try {
+        return fs
+          .readdirSync(serviceDir, { withFileTypes: true })
+          .some((entry) => entry.isFile() && entry.name.endsWith(".jsonl"));
+      } catch {
+        return false;
+      }
+    }),
+  );
+}
+
 function listJsonlFiles(dirPath: string): string[] {
   try {
     return fs

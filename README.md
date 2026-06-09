@@ -125,6 +125,12 @@ pa skill import ./my-skill/                # 导入目录
 pa skill import ./skill.zip                # 导入 zip
 pa skill import ./my-skill/ --overwrite --category ai --tags "tag1,tag2"
 
+pa skill download my-skill                 # 下载为 my-skill.zip
+pa skill download my-skill -o ./my-skill.zip
+
+pa skill install my-skill                  # 安装到当前项目 .claude/skills/my-skill
+pa skill install my-skill --dir /tmp/skills
+
 pa skill delete my-skill                   # 需确认
 pa skill delete my-skill -f                # 跳过确认
 ```

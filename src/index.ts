@@ -8,6 +8,7 @@ import { registerSessionCommands } from "./commands/session/index.js";
 import { registerSkillsCommand } from "./commands/skills-install.js";
 import { registerSpaceCommands } from "./commands/space/index.js";
 import { registerMcpCommands } from "./commands/mcp/index.js";
+import { registerAiCommands } from "./commands/ai/index.js";
 import { registerLiveArtifactCommands } from "./commands/live-artifact/index.js";
 import { registerLogsCommands } from "./commands/logs/index.js";
 
@@ -31,6 +32,7 @@ registerSessionCommands(program);
 registerSkillsCommand(program);
 registerSpaceCommands(program);
 registerMcpCommands(program);
+registerAiCommands(program);
 registerLiveArtifactCommands(program);
 registerLogsCommands(program);
 

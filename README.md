@@ -83,6 +83,29 @@ pa config profile remove <name>     # 删除 Profile
 
 切换 Profile 后，所有后续命令自动使用该环境的 serverUrl 和 apiKey。
 
+### AI 配置管理
+
+```bash
+pa ai config get                                  # 查看当前 AI 配置（stored/effective）
+pa ai config get --output json                    # JSON 输出完整结构
+
+pa ai config template --provider qwen             # 打印 qwen 模板到 stdout
+pa ai config template --provider glm -o ai.json   # 生成 glm 模板文件
+
+pa ai config add --file ./ai-config.json          # 严格新增（已有配置时失败）
+pa ai config update --file ./ai-config.json       # 严格更新（无配置时失败）
+pa ai config delete                               # 删除配置（需确认）
+pa ai config delete --force                       # 跳过确认，硬删除并回落 env
+```
+
+`add/update` 的 JSON 结构需包含：
+- `provider`: `qwen` 或 `glm`
+- `baseUrl`
+- `fastModel`
+- `strongModel`
+- `pricingConfig`（结构与 `PA_SESSION_USAGE_PRICING_JSON` 一致）
+- `apiKey`：`add` 必填，`update` 可选（传入即轮换）
+
 ## 命令列表
 
 ### 智能体管理

@@ -69,6 +69,7 @@ pa agent list
 pa skill list
 pa session list
 pa live-artifact list
+pa example list
 ```
 
 ### 多环境 Profile 管理
@@ -194,6 +195,28 @@ pa session delete <id> -f                  # 跳过确认
 
 `session workspace` 仅暴露智能体在 session workspace 中生成的文件，不包含用户上传的 `assets/` 内容。
 
+### 示例库管理
+
+```bash
+pa example list                                     # 列出示例（默认当前/默认空间）
+pa example list --space default --search "demo"    # 按空间和关键词过滤
+pa example list --output json                       # JSON 格式输出
+
+pa example export-session <sessionId>               # 导出 session 示例包（zip）
+pa example export-session <sessionId> -o ./bundle.zip
+pa example export-session <sessionId> --as-dir      # 同时解压到同名目录
+pa example export-session <sessionId> --as-dir ./bundle-dir
+
+pa example import ./pa-example-bundle.zip           # 导入示例包
+pa example import ./bundle-dir --space default      # 从目录导入（CLI 自动打包）
+pa example import ./bundle.zip --force              # 同 space 同 digest 覆盖
+pa example import ./bundle.zip --require-agent-match
+                                                   # 强校验 agentId@version 存在
+
+pa example delete <exampleId>                       # 需确认
+pa example delete <exampleId> -f                    # 跳过确认
+```
+
 ### Live Artifact 管理
 
 ```bash
@@ -310,6 +333,7 @@ src/
 │   ├── agent/          # agent list/get/upload/download/delete/version
 │   ├── skill/          # skill list/import/delete
 │   ├── session/        # session list/get/delete/logs/feedback
+│   ├── example/        # example list/import/export-session/delete
 │   ├── live-artifact/  # live-artifact list/get/publish/update/refresh/delete/source-docs
 │   └── config.ts       # config set/view, profile add/list/remove, use
 ├── lib/

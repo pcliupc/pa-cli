@@ -107,6 +107,13 @@ pa ai config delete --force                       # 跳过确认，硬删除并�
 - `pricingConfig`（结构与 `PA_SESSION_USAGE_PRICING_JSON` 一致）
 - `apiKey`：`add` 必填，`update` 可选（传入即轮换）
 
+### 用量统计治理
+
+```bash
+pa usage clear                               # 清空平台用量统计并重置游标日期基线（需确认）
+pa usage clear --force                       # 跳过确认
+```
+
 ## 命令列表
 
 ### 智能体管理
@@ -194,6 +201,13 @@ pa session delete <id> -f                  # 跳过确认
 ```
 
 `session workspace` 仅暴露智能体在 session workspace 中生成的文件，不包含用户上传的 `assets/` 内容。
+
+### 用量统计治理
+
+```bash
+pa usage clear                               # 清空平台用量统计并重置游标日期基线（需确认）
+pa usage clear --force                       # 跳过确认
+```
 
 ### 示例库管理
 

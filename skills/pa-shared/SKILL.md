@@ -97,8 +97,9 @@ pa session list --output json --page 1 --limit 10
 ```
 pa <resource> <action> [options] [arguments]
 
-resource: agent | skill | session | space | mcp | config
+resource: agent | skill | session | example | space | mcp | config
 action:   list | get | upload | download | delete | import | create | logs | feedback
+          export-session
           workspace list | workspace download
 ```
 

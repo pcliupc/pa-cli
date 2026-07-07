@@ -4,7 +4,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const SKILL_NAMES = ["pa-shared", "pa-agent", "pa-skill", "pa-session", "pa-space", "pa-mcp"];
+const SKILL_NAMES = [
+  "pa-shared",
+  "pa-agent",
+  "pa-skill",
+  "pa-session",
+  "pa-space",
+  "pa-mcp",
+  "pa-example",
+];
 
 export function registerSkillsCommand(program: Command): void {
   program

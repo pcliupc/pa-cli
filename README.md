@@ -267,7 +267,7 @@ Live Artifact 支持 html-app（HTML Bundle）和 course（Markdown Flow）两�
 
 ## AI Agent Skills
 
-CLI 附带 4 个 AI Agent Skills，可供 Claude Code 等 AI Agent 使用。
+CLI 附带 7 个 AI Agent Skills，可供 Claude Code 等 AI Agent 使用。
 
 ### 安装 Skills
 
@@ -277,7 +277,7 @@ CLI 附带 4 个 AI Agent Skills，可供 Claude Code 等 AI Agent 使用。
 pa skills-install
 ```
 
-这会将 4 个 skills 安装到当前项目的 `.claude/skills/` 目录。安装后重启 Claude Code 即可自动加载。
+这会将 7 个 skills 安装到当前项目的 `.claude/skills/` 目录。安装后重启 Claude Code 即可自动加载。
 
 也可指定目标目录：
 
@@ -293,6 +293,9 @@ pa skills-install --dir /path/to/project/.claude/skills
 | `pa-agent` | 智能体管理 |
 | `pa-skill` | 技能管理 |
 | `pa-session` | 会话管理 |
+| `pa-space` | 空间管理 |
+| `pa-mcp` | MCP 服务器管理 |
+| `pa-example` | 示例库管理（list/import/export-session/delete） |
 
 ## 认证
 

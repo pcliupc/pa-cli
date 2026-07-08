@@ -110,6 +110,9 @@ pa ai config delete --force                       # 跳过确认，硬删除并�
 ### 用量统计治理
 
 ```bash
+pa usage get                                 # 查看平台总览用量
+pa usage get --date-from 2026-07-01 --date-to 2026-07-07
+                                             # 按日期区间查看平台总览用量（含边界）
 pa usage clear                               # 清空平台用量统计并重置游标日期基线（需确认）
 pa usage clear --force                       # 跳过确认
 ```
@@ -205,6 +208,9 @@ pa session delete <id> -f                  # 跳过确认
 ### 用量统计治理
 
 ```bash
+pa usage get                                 # 查看平台总览用量
+pa usage get --date-from 2026-07-01 --date-to 2026-07-07
+                                             # 按日期区间查看平台总览用量（含边界）
 pa usage clear                               # 清空平台用量统计并重置游标日期基线（需确认）
 pa usage clear --force                       # 跳过确认
 ```

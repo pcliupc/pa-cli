@@ -275,7 +275,10 @@ export function formatInsightJobOutcome(input: {
   directory: string;
 }): string {
   const verb = isSuccessfulInsightJob(input.status) ? "completed" : "finished";
-  return `Insight job ${input.jobId} ${verb} with status ${input.status}. Output saved to ${input.directory}.`;
+  const resume = isSuccessfulInsightJob(input.status)
+    ? ""
+    : ` Resume with: pa insights job ${input.jobId} --wait.`;
+  return `Insight job ${input.jobId} ${verb} with status ${input.status}. Output saved to ${input.directory}.${resume}`;
 }
 
 export async function confirmUseAvailable(input: {

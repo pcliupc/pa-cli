@@ -35,10 +35,6 @@ export async function writeInsightEvaluation(input: {
   rootDir: string;
   job: InsightJobResultResponse;
 }): Promise<{ directory: string; files: string[] }> {
-  if (!input.job.result) {
-    throw new Error(`Insight job ${input.job.jobId} has no downloadable result.`);
-  }
-
   const directory = path.resolve(input.rootDir, input.job.jobId);
   const files: string[] = [];
   await mkdir(directory, { recursive: true });
@@ -46,6 +42,17 @@ export async function writeInsightEvaluation(input: {
   const manifestPath = path.join(directory, "manifest.json");
   await writeFile(manifestPath, `${JSON.stringify(input.job, null, 2)}\n`, "utf8");
   files.push(manifestPath);
+
+  if (!input.job.result) {
+    const errorPath = path.join(directory, "error.md");
+    await writeFile(
+      errorPath,
+      `# Insight generation failed\n\n- Job: ${input.job.jobId}\n- Status: ${input.job.status}\n- Error: ${input.job.errorKey ?? "unknown"}\n`,
+      "utf8",
+    );
+    files.push(errorPath);
+    return { directory, files };
+  }
 
   const result = input.job.result;
   if (result.targetType === "session") {

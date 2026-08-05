@@ -53,4 +53,13 @@ describe("agent insights", () => {
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("finished with status partial"));
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining(".pa/evaluations/job-1"));
   });
+
+  it("reports a failed job with null result and keeps its output directory", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    postJsonMock.mockResolvedValueOnce({ targetType: "agent", targetId: "agent-1", window: null, agentVersionId: null, coverage: {}, requiresConfirmation: false }).mockResolvedValueOnce({ jobId: "job-failed", status: "queued" });
+    getJsonMock.mockResolvedValueOnce({ jobId: "job-failed", status: "failed", progressStage: "failed" }).mockResolvedValueOnce({ jobId: "job-failed", status: "failed", progressStage: "failed", errorKey: "insightsGenerationFailed", result: null });
+    writeInsightEvaluationMock.mockResolvedValueOnce({ directory: ".pa/evaluations/job-failed", files: [".pa/evaluations/job-failed/manifest.json"] });
+    await expect(run(["agent", "insights", "agent-1"])).rejects.toThrow("failed");
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining(".pa/evaluations/job-failed"));
+  });
 });

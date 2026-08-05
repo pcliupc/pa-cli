@@ -29,4 +29,13 @@ describe("session summarize", () => {
     expect(postJsonMock).toHaveBeenCalledWith("/api/insight-jobs", expect.objectContaining({ targetType: "session", targetId: "session-1", insightTypes: ["summary"], outputMode: "local" }));
     expect(writeInsightEvaluationMock).toHaveBeenCalled();
   });
+
+  it("reports a failed job with null result and keeps its output directory", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    postJsonMock.mockResolvedValue({ jobId: "job-failed", status: "queued" });
+    getJsonMock.mockResolvedValueOnce({ jobId: "job-failed", status: "failed", progressStage: "failed" }).mockResolvedValueOnce({ jobId: "job-failed", status: "failed", progressStage: "failed", errorKey: "insightsGenerationFailed", result: null });
+    writeInsightEvaluationMock.mockResolvedValueOnce({ directory: ".pa/evaluations/job-failed", files: [".pa/evaluations/job-failed/manifest.json"] });
+    await expect(run(["session", "summarize", "session-1"])).rejects.toThrow("failed");
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining(".pa/evaluations/job-failed"));
+  });
 });

@@ -29,7 +29,8 @@ export function registerInsightsJobCommand(insightsCmd: Command): void {
         spinner?.stop();
         const outcome = formatInsightJobOutcome({ jobId: job.jobId, status: job.status, directory: evaluation.directory });
         if (!isSuccessfulInsightJob(job.status)) {
-          if (outputFormat !== "json") console.error(outcome);
+          if (outputFormat === "json") console.log(JSON.stringify({ job, evaluation, error: outcome }, null, 2));
+          else console.error(outcome);
           throw new Error(outcome);
         }
         if (outputFormat === "json") console.log(JSON.stringify({ job, evaluation }, null, 2));

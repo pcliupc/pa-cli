@@ -82,4 +82,29 @@ describe("writeInsightEvaluation", () => {
       await rm(rootDir, { recursive: true, force: true });
     }
   });
+
+  it("writes a manifest even when a failed job has no result payload", async () => {
+    const rootDir = await mkdtemp(path.join(os.tmpdir(), "pa-insight-output-"));
+    try {
+      const output = await writeInsightEvaluation({
+        rootDir,
+        job: {
+          jobId: "job-failed",
+          status: "failed",
+          progressStage: "failed",
+          errorKey: "insightsGenerationFailed",
+          createdAt: "2026-08-05T00:00:00.000Z",
+          startedAt: "2026-08-05T00:00:01.000Z",
+          completedAt: "2026-08-05T00:00:02.000Z",
+          result: null,
+        },
+      });
+
+      expect(output.directory).toBe(path.join(rootDir, "job-failed"));
+      expect(output.files).toContain(path.join(output.directory, "manifest.json"));
+      await expect(readFile(path.join(output.directory, "manifest.json"), "utf8")).resolves.toContain("insightsGenerationFailed");
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
 });

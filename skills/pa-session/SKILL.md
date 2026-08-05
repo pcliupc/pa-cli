@@ -1,7 +1,7 @@
 ---
 name: pa-session
 version: 1.0.0
-description: "PA 会话管理：列出、查看详情、删除会话，获取运行日志、反馈，以及检查和下载 session workspace 里的生成文件。会话会绑定到具体 Agent 版本；当用户需要查看会话列表、检查会话状态和阶段执行情况、确认会话绑定的 Agent 版本、查看运行日志（工具调用、推理记录）、分析智能体生成产物或下载 workspace 文件时触发。"
+description: "PA 会话管理：列出、查看详情、删除会话，获取运行日志、反馈，检查和下载 session workspace 文件，以及为单个 Session 生成摘要。会话会绑定到具体 Agent 版本；当用户需要查看会话列表、检查状态和阶段执行情况、确认绑定版本、查看运行日志、分析生成产物、下载 workspace 文件，或用 local/persist 模式验证和覆盖 Session 摘要时触发。"
 metadata:
 requires:
 bins: ["pa"]
@@ -21,6 +21,8 @@ cliHelp: "pa session --help"
 - **运行日志（Logs）**：会话执行过程中的工具调用、推理记录等结构化日志。
 - **反馈（Feedback）**：用户和管理员对会话结果的评价，包含多维度评分。
 - **Workspace 文件**：智能体在 session 工作区中生成的文件，可用于排查执行结果或下载做离线分析。不包含用户上传的 `assets/`。
+- **Session 摘要任务**：使用平台已有模型、密钥和默认 prompt，为单个 Session 生成摘要和诊断；CLI 不接受这些配置的临时覆盖。
+- **local / persist**：`local` 是默认模式，只保留任务结果和本地评估文件；`persist` 必须显式指定，成功后覆盖当前正式 Session Insight。
 
 版本相关规则：
 
@@ -147,6 +149,36 @@ pa session workspace download <session-id> reports/summary.md --output json
 文件列表会返回：`path`、`type`、`size`、`modifiedAt`。
 下载命令只允许访问 session workspace 中可公开分析的生成文件，不包含 `assets/` 和隐藏目录。
 
+### 生成 Session 摘要
+
+```bash
+# 默认 local：生成文件，但不修改正式 Session Insight
+pa session summarize <session-id>
+
+# 成功后覆盖正式 Session Insight，同时保留本地评估文件
+pa session summarize <session-id> --persist
+
+# 指定本地评估结果根目录
+pa session summarize <session-id> --output-dir ./insight-evaluations
+```
+
+默认结果写入 `.pa/evaluations/<job-id>/`：
+
+- `manifest.json`：任务状态、输入 basis、模型、prompt hash、generator version 和结果元数据
+- `summary.md`：会话摘要
+- `diagnostics/summary.md`：执行诊断
+
+`local` 模式不会把 CLI 生成内容写入正式洞察表，因此 Web 页面不会把它展示为当前正式摘要。`--persist` 会在成功生成后直接覆盖当前正式结果；使用前先确认目标 Session 是否正确。
+
+生成命令会等待异步任务完成。若收到 `Ctrl-C`、等待超时或轮询网络失败，平台任务不会因为 CLI 停止等待而自动取消。使用命令输出中的 job ID 恢复等待和下载：
+
+```bash
+pa insights job <job-id> --wait
+pa insights job <job-id> --wait --output-dir ./insight-evaluations
+```
+
+`partial`、`failed` 和 `expired` 都是非成功终态，CLI 会返回非零退出码。local 结果过期后接口返回 `410`，应重新发起生成。
+
 ## 会话状态说明
 
 | 状态 | 说明 |
@@ -191,6 +223,14 @@ pa session workspace download <session-id> reports/summary.md
 ```bash
 pa session feedback <session-id>
 ```
+
+### 离线验证新摘要，不影响页面正式结果
+
+```bash
+pa session summarize <session-id> --output-dir ./summary-evaluations
+```
+
+检查 `<output-dir>/<job-id>/manifest.json`、`summary.md` 与 `diagnostics/summary.md`。只有用户明确要求覆盖正式结果时，才增加 `--persist`。
 
 ### 清理旧会话
 

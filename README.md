@@ -143,6 +143,13 @@ pa agent version publish demo v3           # 切换当前发布版本
 pa agent download demo                     # 下载为 demo.zip
 pa agent download demo -o ./demo.zip       # 指定输出路径
 
+pa agent insights demo                     # 生成业务 + 设计洞察；默认 local
+pa agent insights demo --type business     # 只生成业务洞察
+pa agent insights demo --type design --version <version-id>
+                                           # 生成指定 Agent Version 的设计洞察
+pa agent insights demo --persist           # 成功后覆盖当前正式洞察
+pa agent insights demo --use-available     # 覆盖率不足时直接使用现有有效样本
+
 pa agent delete demo                       # 需确认；若已有历史会话则会停用而非彻底删除
 pa agent delete demo -f                    # 跳过确认；删除或停用取决于是否已有会话
 ```
@@ -199,11 +206,86 @@ pa session workspace download <id> reports/out.md --output json
                                            # JSON 输出下载元数据
                                            # 不传 -o 时默认保存到当前目录
 
+pa session summarize <id>                  # 生成摘要；默认 local，不改正式结果
+pa session summarize <id> --persist        # 成功后覆盖当前正式 Session Insight
+pa session summarize <id> --output-dir ./evaluations
+                                           # 指定本地评估结果根目录
+
 pa session delete <id>                     # 需确认
 pa session delete <id> -f                  # 跳过确认
 ```
 
 `session workspace` 仅暴露智能体在 session workspace 中生成的文件，不包含用户上传的 `assets/` 内容。
+
+### Session 摘要与 Agent 洞察生成
+
+PACLI 可以调用平台已有的模型、密钥和默认 prompt，对单个 Session 或 Agent 发起异步生成任务。CLI 不接受模型、密钥或 prompt 覆盖参数。
+
+#### local 与 persist
+
+- 默认是 `local`：生成结果保存在任务结果和本地评估目录中，不覆盖 `pa_session_insights` 或正式 Agent snapshot，Web 页面不会把它当作正式洞察展示。
+- 显式传 `--persist`：生成成功后直接覆盖当前正式结果，同时仍把本次结果下载到本地，便于对照验证。
+- 两种模式都经过同一个平台 generation job、Runner、模型配置和默认 prompt；差别只在是否提交到正式洞察表。
+
+默认输出目录是当前目录下的 `.pa/evaluations/<job-id>/`，也可以通过 `--output-dir <path>` 修改根目录。目录结构如下：
+
+```text
+.pa/evaluations/<job-id>/
+├── manifest.json
+├── summary.md                    # Session 摘要任务
+├── diagnostics/summary.md        # Session 执行诊断
+├── business/insights.md          # Agent 业务洞察（如请求）
+└── design/insights.md            # Agent 设计洞察（如请求）
+```
+
+`manifest.json` 包含任务状态、输入 basis、覆盖率、模型、prompt hash、generator version 和各 component 结果，适合后续比较 prompt 或生成策略。
+
+#### 生成 Session 摘要
+
+```bash
+# 默认 local：不修改正式 Session Insight
+pa session summarize <session-id>
+
+# 覆盖正式 Session Insight，并保留本地评估文件
+pa session summarize <session-id> --persist
+
+# 指定本地输出根目录
+pa session summarize <session-id> --output-dir ./insight-evaluations
+```
+
+#### 生成 Agent 洞察
+
+```bash
+# 默认生成 business + design，结果为 local
+pa agent insights <agent-id>
+
+# 只生成一个 component
+pa agent insights <agent-id> --type business
+pa agent insights <agent-id> --type design --version <agent-version-id>
+
+# 覆盖成功生成的正式 component
+pa agent insights <agent-id> --persist --type all
+
+# 非交互环境在覆盖率不足时，显式接受现有有效样本
+pa agent insights <agent-id> --use-available
+```
+
+命令会在创建任务前显示 business / design 的 `total`、`usable`、`included` 覆盖率。覆盖率不足时：
+
+- 交互终端会询问是否继续，只有输入 `y` 或 `yes` 才使用现有有效样本。
+- 非交互环境和 `--output json` 不会询问，必须显式传 `--use-available`。
+- `--use-available` 不会补生成缺失的 Session Insight，只会使用当前已有的有效样本。
+
+#### 中断后恢复任务
+
+CLI 收到 `Ctrl-C`、等待超时或轮询网络失败时会停止本地等待，但平台任务仍以数据库状态为准。记下创建时输出的 job ID 后可恢复等待和下载：
+
+```bash
+pa insights job <job-id> --wait
+pa insights job <job-id> --wait --output-dir ./insight-evaluations
+```
+
+任务状态为 `generated` 或 `persisted` 时命令成功；`partial`、`failed` 或 `expired` 会返回非零退出码。local 任务结果有保留期限，过期后接口返回明确的 `410`，需要重新生成。
 
 ### 用量统计治理
 

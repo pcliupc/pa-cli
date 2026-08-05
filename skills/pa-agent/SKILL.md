@@ -1,7 +1,7 @@
 ---
 name: pa-agent
 version: 1.0.0
-description: "PA 智能体管理：列出逻辑 Agent、查看当前发布版本配置、上传新 Agent 或新版本、查看/发布版本、下载、删除流程智能体。当用户需要查看智能体列表、获取智能体配置（config.yaml）、上传新智能体（yaml/zip/目录）、管理 Agent 版本、下载智能体配置、删除智能体时触发。"
+description: "PA 智能体管理：列出逻辑 Agent、查看当前发布版本配置、上传新 Agent 或新版本、查看/发布版本、下载、删除，以及为单个 Agent 生成业务洞察和设计洞察。当用户需要管理 Agent 与版本，或用 local/persist 模式查看覆盖率、验证洞察价值、覆盖当前正式洞察时触发。"
 metadata:
 requires:
 bins: ["pa"]
@@ -19,6 +19,9 @@ cliHelp: "pa agent --help"
 - **当前发布版本（Current Published Version）**：逻辑 Agent 当前默认给新 session 使用的版本。
 - **config.yaml**：智能体的配置文件，定义阶段、人设、MCP 服务器等。
 - **Private Skill**：智能体私有的技能，存储在智能体目录的 `skills/` 子目录中。
+- **Agent 洞察**：基于已有 Session Insight 生成的 business 和 design 两类聚合结果；始终使用平台已有模型、密钥和默认 prompt。
+- **覆盖率（Coverage）**：生成前显示 `total`、`usable`、`included`，说明窗口内总 Session、已有可用 Session Insight 和实际纳入生成的数量。
+- **local / persist**：`local` 是默认模式，只保留任务结果和本地评估文件；`persist` 必须显式指定，成功后覆盖对应正式 snapshot component。
 
 版本语义规则：
 
@@ -139,6 +142,50 @@ pa agent delete demo
 pa agent delete demo -f
 ```
 
+### 生成 Agent 洞察
+
+```bash
+# 默认生成 business + design，结果为 local
+pa agent insights <agent-id>
+
+# 只生成业务洞察
+pa agent insights <agent-id> --type business
+
+# 生成指定 Agent Version 的设计洞察
+pa agent insights <agent-id> --type design --version <agent-version-id>
+
+# 生成成功后直接覆盖对应正式 component
+pa agent insights <agent-id> --persist --type all
+
+# 覆盖率不足时，不询问并直接使用已有有效样本
+pa agent insights <agent-id> --use-available
+
+# 指定本地评估结果根目录
+pa agent insights <agent-id> --output-dir ./insight-evaluations
+```
+
+生成前必须先看 CLI 输出的 business / design 覆盖率：
+
+- 覆盖不完整时，交互终端会询问是否继续，只有输入 `y` 或 `yes` 才继续。
+- 非交互环境和 `--output json` 不能询问，必须显式传 `--use-available`。
+- `--use-available` 只使用当前已有的有效 Session Insight，不会自动补齐缺失摘要或诊断。
+- `--persist` 会直接覆盖正式结果；除非用户明确要求，否则保持默认 local。
+
+默认结果写入 `.pa/evaluations/<job-id>/`：
+
+- `manifest.json`：任务状态、覆盖率、输入 basis、模型、prompt hash、generator version 和 component 元数据
+- `business/insights.md`：业务洞察（如请求）
+- `design/insights.md`：设计洞察（如请求）
+
+如果 CLI 因 `Ctrl-C`、等待超时或轮询网络失败停止等待，平台任务仍以数据库状态为准。使用创建时输出的 job ID 恢复：
+
+```bash
+pa insights job <job-id> --wait
+pa insights job <job-id> --wait --output-dir ./insight-evaluations
+```
+
+只有 `generated` 和 `persisted` 是完整成功。`partial` 会保留成功 component 供检查，但与 `failed`、`expired` 一样返回非零退出码；local 结果过期后接口返回 `410`，需要重新生成。
+
 ## 常见场景
 
 ### 查看有哪些智能体
@@ -177,3 +224,15 @@ pa agent get demo
 ```bash
 pa agent version get demo v1
 ```
+
+### 先验证洞察价值，再决定是否覆盖正式结果
+
+```bash
+# 第一次保持 local，检查覆盖率和本地结果
+pa agent insights demo --type all --output-dir ./agent-insight-evaluations
+
+# 用户确认结果可作为正式快照后，再显式 persist
+pa agent insights demo --type all --persist
+```
+
+如果覆盖率不足，应把 `total / usable / included` 告知用户；只有用户接受基于现有样本生成时才确认继续或增加 `--use-available`。

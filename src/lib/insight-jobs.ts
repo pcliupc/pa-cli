@@ -121,35 +121,102 @@ const terminalStatuses = new Set<InsightJobStatus>([
   "expired",
 ]);
 
-function sleep(durationMs: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, durationMs));
+export class InsightJobWaitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InsightJobWaitError";
+  }
+}
+
+function resumeHint(jobId: string): string {
+  return `Resume with: pa insights job ${jobId} --wait`;
+}
+
+function abortError(jobId: string): InsightJobWaitError {
+  return new InsightJobWaitError(`Stopped waiting for insight job ${jobId}. ${resumeHint(jobId)}`);
+}
+
+function timeoutError(jobId: string): InsightJobWaitError {
+  return new InsightJobWaitError(`Timed out waiting for insight job ${jobId}. ${resumeHint(jobId)}`);
+}
+
+function pollError(jobId: string, error: unknown): InsightJobWaitError {
+  const message = error instanceof Error ? error.message : String(error);
+  return new InsightJobWaitError(`Unable to poll insight job ${jobId}: ${message}. ${resumeHint(jobId)}`);
+}
+
+function sleep(durationMs: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) return Promise.reject(new Error("aborted"));
+  return new Promise((resolve, reject) => {
+    let timer: NodeJS.Timeout;
+    const cleanup = () => signal?.removeEventListener("abort", onAbort);
+    const cleanupAndResolve = () => {
+      cleanup();
+      resolve();
+    };
+    const onAbort = () => {
+      clearTimeout(timer);
+      cleanup();
+      reject(new Error("aborted"));
+    };
+    timer = setTimeout(cleanupAndResolve, durationMs);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 export async function waitForInsightJob(input: {
   client: PaApiClient;
   jobId: string;
   intervalMs?: number;
+  timeoutMs?: number;
+  signal?: AbortSignal;
   onStatus?: (status: InsightJobStatusResponse) => void;
 }): Promise<InsightJobResultResponse> {
   let delay = input.intervalMs ?? 500;
   let lastStatus: InsightJobStatus | undefined;
+  const startedAt = Date.now();
+  const timeoutMs = input.timeoutMs ?? 15 * 60 * 1_000;
 
   while (true) {
-    const status = await input.client.getJson<InsightJobStatusResponse>(
-      `/api/insight-jobs/${encodeURIComponent(input.jobId)}`,
-    );
+    if (input.signal?.aborted) throw abortError(input.jobId);
+    if (Date.now() - startedAt >= timeoutMs) throw timeoutError(input.jobId);
+    let status: InsightJobStatusResponse;
+    try {
+      status = await input.client.getJson<InsightJobStatusResponse>(
+        `/api/insight-jobs/${encodeURIComponent(input.jobId)}`,
+      );
+    } catch (error) {
+      if (input.signal?.aborted) throw abortError(input.jobId);
+      throw pollError(input.jobId, error);
+    }
     if (status.status !== lastStatus) {
       input.onStatus?.(status);
       lastStatus = status.status;
     }
     if (terminalStatuses.has(status.status)) {
-      return input.client.getJson<InsightJobResultResponse>(
-        `/api/insight-jobs/${encodeURIComponent(input.jobId)}/result`,
-      );
+      try {
+        return await input.client.getJson<InsightJobResultResponse>(
+          `/api/insight-jobs/${encodeURIComponent(input.jobId)}/result`,
+        );
+      } catch (error) {
+        if (error instanceof Error && /expired/i.test(error.message)) throw error;
+        throw pollError(input.jobId, error);
+      }
     }
-    if (delay > 0) await sleep(delay);
+    try {
+      if (delay > 0) await sleep(delay, input.signal);
+    } catch {
+      throw abortError(input.jobId);
+    }
     delay = Math.min(Math.max(delay, 100) * 1.5, 5_000);
   }
+}
+
+export function formatInsightCoverage(coverage: InsightJobPreflightResponse): string {
+  const details = Object.entries(coverage.coverage)
+    .map(([type, item]) => `${type} ${item?.included ?? 0}/${item?.usable ?? 0} usable of ${item?.total ?? 0}`)
+    .join(", ");
+  return `Coverage: ${details || "no Session Insights available"}`;
 }
 
 export async function confirmUseAvailable(input: {
@@ -161,10 +228,7 @@ export async function confirmUseAvailable(input: {
   const stdout = input.stdout ?? process.stdout;
   if (!(stdin as NodeJS.ReadableStream & { isTTY?: boolean }).isTTY) return false;
 
-  const coverage = Object.entries(input.coverage.coverage)
-    .map(([type, item]) => `${type}: ${item?.included ?? 0}/${item?.usable ?? 0} usable of ${item?.total ?? 0}`)
-    .join(", ");
-  stdout.write(`Available Session Insight coverage (${coverage}). Continue with available samples? [y/N] `);
+  stdout.write(`${formatInsightCoverage(input.coverage)}. Continue with available samples? [y/N] `);
 
   return new Promise((resolve) => {
     let value = "";
@@ -181,7 +245,9 @@ export async function confirmUseAvailable(input: {
     const cleanup = () => {
       stdin.removeListener("data", onData);
       stdin.removeListener("end", onEnd);
+      if ("pause" in stdin && typeof stdin.pause === "function") stdin.pause();
     };
+    if ("resume" in stdin && typeof stdin.resume === "function") stdin.resume();
     stdin.on("data", onData);
     stdin.once("end", onEnd);
   });

@@ -50,6 +50,15 @@ describe("insight job helpers", () => {
     await expect(confirmation).resolves.toBe(true);
   });
 
+  it("pauses an interactive input again after confirmation", async () => {
+    const { PassThrough } = await import("node:stream");
+    const stdin = Object.assign(new PassThrough(), { isTTY: true });
+    const confirmation = confirmUseAvailable({ coverage: preflight, stdin, stdout: new PassThrough() });
+    stdin.write("y\n");
+    await expect(confirmation).resolves.toBe(true);
+    expect(stdin.isPaused()).toBe(true);
+  });
+
   it("waits until a terminal status and retrieves its result", async () => {
     const getJson = vi
       .fn()
@@ -75,5 +84,32 @@ describe("insight job helpers", () => {
     expect(getJson).toHaveBeenNthCalledWith(1, "/api/insight-jobs/job-1");
     expect(getJson).toHaveBeenLastCalledWith("/api/insight-jobs/job-1/result");
     expect(result.status).toBe("generated");
+  });
+
+  it("stops immediately when its caller aborts and includes a resume command", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    await expect(waitForInsightJob({
+      client: { getJson: vi.fn() } as unknown as PaApiClient,
+      jobId: "job-1",
+      signal: controller.signal,
+    })).rejects.toThrow("pa insights job job-1 --wait");
+  });
+
+  it("times out instead of polling indefinitely", async () => {
+    const getJson = vi.fn().mockResolvedValue({ jobId: "job-1", status: "queued", progressStage: null });
+    await expect(waitForInsightJob({
+      client: { getJson } as unknown as PaApiClient,
+      jobId: "job-1",
+      intervalMs: 0,
+      timeoutMs: 0,
+    })).rejects.toThrow(/timed out/i);
+  });
+
+  it("gives a resume command when polling fails on the network", async () => {
+    await expect(waitForInsightJob({
+      client: { getJson: vi.fn().mockRejectedValue(new Error("Cannot connect to server")) } as unknown as PaApiClient,
+      jobId: "job-1",
+    })).rejects.toThrow("Resume with: pa insights job job-1 --wait");
   });
 });

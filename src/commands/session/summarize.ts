@@ -17,20 +17,25 @@ export function registerSessionSummarizeCommand(sessionCmd: Command): void {
       const outputFormat = (parentOpts?.output ?? "table") as OutputFormat;
       const client = new PaApiClient({ serverUrl: parentOpts?.server ?? config.serverUrl, apiKey: config.apiKey });
       const spinner = outputFormat === "json" ? null : ora("Creating session summary job...").start();
+      const controller = new AbortController();
+      const onInterrupt = () => controller.abort();
+      process.once("SIGINT", onInterrupt);
       try {
         const created = await createInsightJob({ client, targetType: "session", targetId: sessionId, insightTypes: ["summary"], outputMode: options.persist ? "persist" : "local" });
-        const job = await waitForInsightJob({ client, jobId: created.jobId, onStatus: (status) => {
+        const job = await waitForInsightJob({ client, jobId: created.jobId, signal: controller.signal, onStatus: (status) => {
           if (spinner) spinner.text = `Insight job ${status.status}${status.progressStage ? ` (${status.progressStage})` : ""}...`;
         } });
         const evaluation = await writeInsightEvaluation({ rootDir: options.outputDir ?? defaultInsightOutputRoot(), job });
         spinner?.stop();
+        if (!isSuccessfulInsightJob(job.status)) throw new Error(`Insight job finished with status ${job.status}.`);
         if (outputFormat === "json") console.log(JSON.stringify({ job, evaluation }, null, 2));
         else console.log(`Session summary saved to ${evaluation.directory}`);
-        if (!isSuccessfulInsightJob(job.status)) throw new Error(`Insight job finished with status ${job.status}.`);
       } catch (error) {
         spinner?.stop();
         process.exitCode = 1;
         throw error;
+      } finally {
+        process.removeListener("SIGINT", onInterrupt);
       }
     });
 }

@@ -32,4 +32,19 @@ describe("agent insights", () => {
     expect(postJsonMock).toHaveBeenNthCalledWith(1, "/api/insight-jobs/preflight", expect.objectContaining({ insightTypes: ["design"], agentVersionId: "version-1" }));
     expect(postJsonMock).toHaveBeenNthCalledWith(2, "/api/insight-jobs", expect.objectContaining({ outputMode: "persist", insightTypes: ["design"] }));
   });
+  it("shows coverage when --use-available bypasses confirmation", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    postJsonMock.mockResolvedValueOnce({ targetType: "agent", targetId: "agent-1", window: null, agentVersionId: null, coverage: { business: { total: 3, usable: 2, included: 2 } }, requiresConfirmation: true }).mockResolvedValueOnce({ jobId: "job-1", status: "queued" });
+    getJsonMock.mockResolvedValueOnce({ jobId: "job-1", status: "generated", progressStage: "completed" }).mockResolvedValueOnce({ jobId: "job-1", status: "generated", progressStage: "completed", errorKey: null, createdAt: "", startedAt: null, completedAt: null, result: { schemaVersion: 1, jobId: "job-1", targetType: "agent", targetId: "agent-1", outputMode: "local", components: {}, metadata: { inputBasis: {}, coverage: {}, startedAt: "", completedAt: "", durationMs: 0 } } });
+    await run(["agent", "insights", "agent-1", "--use-available"]);
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Coverage: business 2/2 usable of 3"));
+  });
+
+  it("does not print a success message for partial output", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    postJsonMock.mockResolvedValueOnce({ targetType: "agent", targetId: "agent-1", window: null, agentVersionId: null, coverage: {}, requiresConfirmation: false }).mockResolvedValueOnce({ jobId: "job-1", status: "queued" });
+    getJsonMock.mockResolvedValueOnce({ jobId: "job-1", status: "partial", progressStage: "completed" }).mockResolvedValueOnce({ jobId: "job-1", status: "partial", progressStage: "completed", errorKey: null, createdAt: "", startedAt: null, completedAt: null, result: { schemaVersion: 1, jobId: "job-1", targetType: "agent", targetId: "agent-1", outputMode: "local", components: {}, metadata: { inputBasis: {}, coverage: {}, startedAt: "", completedAt: "", durationMs: 0 } } });
+    await expect(run(["agent", "insights", "agent-1"])).rejects.toThrow("partial");
+    expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining("Agent insights saved"));
+  });
 });

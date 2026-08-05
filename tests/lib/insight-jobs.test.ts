@@ -112,4 +112,40 @@ describe("insight job helpers", () => {
       jobId: "job-1",
     })).rejects.toThrow("Resume with: pa insights job job-1 --wait");
   });
+
+  it("aborts a status request that is already in flight", async () => {
+    const controller = new AbortController();
+    const pending = new Promise<never>(() => undefined);
+    const wait = waitForInsightJob({
+      client: { getJson: vi.fn().mockReturnValue(pending) } as unknown as PaApiClient,
+      jobId: "job-1",
+      signal: controller.signal,
+    });
+    controller.abort();
+    await expect(wait).rejects.toThrow("Stopped waiting for insight job job-1");
+  }, 1_000);
+
+  it("times out a status request that is already in flight", async () => {
+    await expect(waitForInsightJob({
+      client: { getJson: vi.fn().mockReturnValue(new Promise<never>(() => undefined)) } as unknown as PaApiClient,
+      jobId: "job-1",
+      timeoutMs: 10,
+    })).rejects.toThrow(/timed out/i);
+  }, 1_000);
+
+  it("aborts a result request that is already in flight", async () => {
+    const controller = new AbortController();
+    const getJson = vi
+      .fn()
+      .mockResolvedValueOnce({ jobId: "job-1", status: "generated", progressStage: "completed" })
+      .mockReturnValueOnce(new Promise<never>(() => undefined));
+    const wait = waitForInsightJob({
+      client: { getJson } as unknown as PaApiClient,
+      jobId: "job-1",
+      signal: controller.signal,
+    });
+    await vi.waitFor(() => expect(getJson).toHaveBeenCalledTimes(2));
+    controller.abort();
+    await expect(wait).rejects.toThrow("Stopped waiting for insight job job-1");
+  }, 1_000);
 });

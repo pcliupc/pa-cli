@@ -3,7 +3,7 @@ import ora from "ora";
 
 import { PaApiClient } from "../../lib/api-client.js";
 import { loadConfig } from "../../lib/config.js";
-import { confirmUseAvailable, createInsightJob, formatInsightCoverage, isSuccessfulInsightJob, preflightInsightJob, type InsightJobType, waitForInsightJob } from "../../lib/insight-jobs.js";
+import { confirmUseAvailable, createInsightJob, formatInsightCoverage, formatInsightJobOutcome, isSuccessfulInsightJob, preflightInsightJob, type InsightJobType, waitForInsightJob } from "../../lib/insight-jobs.js";
 import { defaultInsightOutputRoot, writeInsightEvaluation } from "../../lib/insight-output.js";
 import type { OutputFormat } from "../../lib/output.js";
 
@@ -45,9 +45,13 @@ export function registerAgentInsightsCommand(agentCmd: Command): void {
         } });
         const evaluation = await writeInsightEvaluation({ rootDir: options.outputDir ?? defaultInsightOutputRoot(), job });
         spinner?.stop();
-        if (!isSuccessfulInsightJob(job.status)) throw new Error(`Insight job finished with status ${job.status}.`);
+        const outcome = formatInsightJobOutcome({ jobId: job.jobId, status: job.status, directory: evaluation.directory });
+        if (!isSuccessfulInsightJob(job.status)) {
+          if (outputFormat !== "json") console.error(outcome);
+          throw new Error(outcome);
+        }
         if (outputFormat === "json") console.log(JSON.stringify({ preflight, job, evaluation }, null, 2));
-        else console.log(`Agent insights saved to ${evaluation.directory}`);
+        else console.log(outcome);
       } catch (error) {
         spinner?.stop();
         process.exitCode = 1;

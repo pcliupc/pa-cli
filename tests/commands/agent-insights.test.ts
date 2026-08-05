@@ -26,11 +26,14 @@ describe("agent insights", () => {
     await expect(run(["agent", "insights", "agent-1"])).rejects.toThrow("--use-available");
   });
   it("passes selected type, version, and persist mode to the job API", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
     postJsonMock.mockResolvedValueOnce({ targetType: "agent", targetId: "agent-1", window: null, agentVersionId: "version-1", coverage: {}, requiresConfirmation: false }).mockResolvedValueOnce({ jobId: "job-1", status: "queued" });
     getJsonMock.mockResolvedValueOnce({ jobId: "job-1", status: "persisted", progressStage: "completed" }).mockResolvedValueOnce({ jobId: "job-1", status: "persisted", progressStage: "completed", errorKey: null, createdAt: "", startedAt: null, completedAt: null, result: { schemaVersion: 1, jobId: "job-1", targetType: "agent", targetId: "agent-1", outputMode: "persist", components: {}, metadata: { inputBasis: {}, coverage: {}, startedAt: "", completedAt: "", durationMs: 0 } } });
     await run(["agent", "insights", "agent-1", "--type", "design", "--version", "version-1", "--persist"]);
     expect(postJsonMock).toHaveBeenNthCalledWith(1, "/api/insight-jobs/preflight", expect.objectContaining({ insightTypes: ["design"], agentVersionId: "version-1" }));
     expect(postJsonMock).toHaveBeenNthCalledWith(2, "/api/insight-jobs", expect.objectContaining({ outputMode: "persist", insightTypes: ["design"] }));
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("completed with status persisted"));
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining(".pa/evaluations/job-1"));
   });
   it("shows coverage when --use-available bypasses confirmation", async () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
@@ -42,9 +45,12 @@ describe("agent insights", () => {
 
   it("does not print a success message for partial output", async () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     postJsonMock.mockResolvedValueOnce({ targetType: "agent", targetId: "agent-1", window: null, agentVersionId: null, coverage: {}, requiresConfirmation: false }).mockResolvedValueOnce({ jobId: "job-1", status: "queued" });
     getJsonMock.mockResolvedValueOnce({ jobId: "job-1", status: "partial", progressStage: "completed" }).mockResolvedValueOnce({ jobId: "job-1", status: "partial", progressStage: "completed", errorKey: null, createdAt: "", startedAt: null, completedAt: null, result: { schemaVersion: 1, jobId: "job-1", targetType: "agent", targetId: "agent-1", outputMode: "local", components: {}, metadata: { inputBasis: {}, coverage: {}, startedAt: "", completedAt: "", durationMs: 0 } } });
     await expect(run(["agent", "insights", "agent-1"])).rejects.toThrow("partial");
     expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining("Agent insights saved"));
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("finished with status partial"));
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining(".pa/evaluations/job-1"));
   });
 });

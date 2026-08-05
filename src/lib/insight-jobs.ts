@@ -145,6 +145,43 @@ function pollError(jobId: string, error: unknown): InsightJobWaitError {
   return new InsightJobWaitError(`Unable to poll insight job ${jobId}: ${message}. ${resumeHint(jobId)}`);
 }
 
+async function awaitControlledRequest<T>(input: {
+  request: () => Promise<T>;
+  jobId: string;
+  signal?: AbortSignal;
+  timeoutMs: number;
+}): Promise<T> {
+  if (input.signal?.aborted) throw abortError(input.jobId);
+  if (input.timeoutMs <= 0) throw timeoutError(input.jobId);
+
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    const cleanup = () => {
+      clearTimeout(timer);
+      input.signal?.removeEventListener("abort", onAbort);
+    };
+    const settle = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      callback();
+    };
+    const onAbort = () => settle(() => reject(abortError(input.jobId)));
+    const timer = setTimeout(
+      () => settle(() => reject(timeoutError(input.jobId))),
+      input.timeoutMs,
+    );
+
+    input.signal?.addEventListener("abort", onAbort, { once: true });
+    Promise.resolve()
+      .then(input.request)
+      .then(
+        (value) => settle(() => resolve(value)),
+        (error: unknown) => settle(() => reject(error)),
+      );
+  });
+}
+
 function sleep(durationMs: number, signal?: AbortSignal): Promise<void> {
   if (signal?.aborted) return Promise.reject(new Error("aborted"));
   return new Promise((resolve, reject) => {
@@ -180,12 +217,19 @@ export async function waitForInsightJob(input: {
   while (true) {
     if (input.signal?.aborted) throw abortError(input.jobId);
     if (Date.now() - startedAt >= timeoutMs) throw timeoutError(input.jobId);
+    const remainingMs = timeoutMs - (Date.now() - startedAt);
     let status: InsightJobStatusResponse;
     try {
-      status = await input.client.getJson<InsightJobStatusResponse>(
-        `/api/insight-jobs/${encodeURIComponent(input.jobId)}`,
-      );
+      status = await awaitControlledRequest({
+        request: () => input.client.getJson<InsightJobStatusResponse>(
+          `/api/insight-jobs/${encodeURIComponent(input.jobId)}`,
+        ),
+        jobId: input.jobId,
+        signal: input.signal,
+        timeoutMs: remainingMs,
+      });
     } catch (error) {
+      if (error instanceof InsightJobWaitError) throw error;
       if (input.signal?.aborted) throw abortError(input.jobId);
       throw pollError(input.jobId, error);
     }
@@ -195,10 +239,16 @@ export async function waitForInsightJob(input: {
     }
     if (terminalStatuses.has(status.status)) {
       try {
-        return await input.client.getJson<InsightJobResultResponse>(
-          `/api/insight-jobs/${encodeURIComponent(input.jobId)}/result`,
-        );
+        return await awaitControlledRequest({
+          request: () => input.client.getJson<InsightJobResultResponse>(
+            `/api/insight-jobs/${encodeURIComponent(input.jobId)}/result`,
+          ),
+          jobId: input.jobId,
+          signal: input.signal,
+          timeoutMs: timeoutMs - (Date.now() - startedAt),
+        });
       } catch (error) {
+        if (error instanceof InsightJobWaitError) throw error;
         if (error instanceof Error && /expired/i.test(error.message)) throw error;
         throw pollError(input.jobId, error);
       }
@@ -217,6 +267,15 @@ export function formatInsightCoverage(coverage: InsightJobPreflightResponse): st
     .map(([type, item]) => `${type} ${item?.included ?? 0}/${item?.usable ?? 0} usable of ${item?.total ?? 0}`)
     .join(", ");
   return `Coverage: ${details || "no Session Insights available"}`;
+}
+
+export function formatInsightJobOutcome(input: {
+  jobId: string;
+  status: InsightJobStatus;
+  directory: string;
+}): string {
+  const verb = isSuccessfulInsightJob(input.status) ? "completed" : "finished";
+  return `Insight job ${input.jobId} ${verb} with status ${input.status}. Output saved to ${input.directory}.`;
 }
 
 export async function confirmUseAvailable(input: {

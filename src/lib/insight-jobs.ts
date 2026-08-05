@@ -76,6 +76,21 @@ interface CreateInsightJobResponse {
   reused?: boolean;
 }
 
+export async function resolveCurrentAgentVersionId(input: {
+  client: PaApiClient;
+  agentId: string;
+}): Promise<string> {
+  const response = await input.client.getJson<{
+    current_version_id?: string | null;
+    currentVersionId?: string | null;
+  }>(`/api/agents/${encodeURIComponent(input.agentId)}/versions`);
+  const versionId = response.current_version_id ?? response.currentVersionId;
+  if (!versionId) {
+    throw new Error(`Agent ${input.agentId} has no current published version.`);
+  }
+  return versionId;
+}
+
 export async function preflightInsightJob(input: {
   client: PaApiClient;
   targetType: "session" | "agent";
@@ -275,10 +290,11 @@ export function formatInsightJobOutcome(input: {
   directory: string;
 }): string {
   const verb = isSuccessfulInsightJob(input.status) ? "completed" : "finished";
+  const partial = input.status === "partial" ? " (partial success)" : "";
   const resume = isSuccessfulInsightJob(input.status)
     ? ""
     : ` Resume with: pa insights job ${input.jobId} --wait.`;
-  return `Insight job ${input.jobId} ${verb} with status ${input.status}. Output saved to ${input.directory}.${resume}`;
+  return `Insight job ${input.jobId} ${verb} with status ${input.status}${partial}. Output saved to ${input.directory}.${resume}`;
 }
 
 export async function confirmUseAvailable(input: {

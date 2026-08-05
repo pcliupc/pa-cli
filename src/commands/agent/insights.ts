@@ -3,7 +3,7 @@ import ora from "ora";
 
 import { PaApiClient } from "../../lib/api-client.js";
 import { loadConfig } from "../../lib/config.js";
-import { confirmUseAvailable, createInsightJob, formatInsightCoverage, formatInsightJobOutcome, isSuccessfulInsightJob, preflightInsightJob, type InsightJobType, waitForInsightJob } from "../../lib/insight-jobs.js";
+import { confirmUseAvailable, createInsightJob, formatInsightCoverage, formatInsightJobOutcome, isSuccessfulInsightJob, preflightInsightJob, resolveCurrentAgentVersionId, type InsightJobType, waitForInsightJob } from "../../lib/insight-jobs.js";
 import { defaultInsightOutputRoot, writeInsightEvaluation } from "../../lib/insight-output.js";
 import type { OutputFormat } from "../../lib/output.js";
 
@@ -25,7 +25,8 @@ export function registerAgentInsightsCommand(agentCmd: Command): void {
       const outputFormat = (parentOpts?.output ?? "table") as OutputFormat;
       const client = new PaApiClient({ serverUrl: parentOpts?.server ?? config.serverUrl, apiKey: config.apiKey });
       const insightTypes = selectedTypes(type);
-      const preflight = await preflightInsightJob({ client, targetType: "agent", targetId: agentId, insightTypes, agentVersionId: options.version });
+      const agentVersionId = options.version ?? await resolveCurrentAgentVersionId({ client, agentId });
+      const preflight = await preflightInsightJob({ client, targetType: "agent", targetId: agentId, insightTypes, agentVersionId });
       if (outputFormat !== "json") console.log(formatInsightCoverage(preflight));
       let useAvailable = options.useAvailable === true;
       if (preflight.requiresConfirmation && !useAvailable) {
@@ -39,7 +40,7 @@ export function registerAgentInsightsCommand(agentCmd: Command): void {
       const onInterrupt = () => controller.abort();
       process.once("SIGINT", onInterrupt);
       try {
-        const created = await createInsightJob({ client, targetType: "agent", targetId: agentId, insightTypes, outputMode: options.persist ? "persist" : "local", agentVersionId: options.version, useAvailable });
+        const created = await createInsightJob({ client, targetType: "agent", targetId: agentId, insightTypes, outputMode: options.persist ? "persist" : "local", agentVersionId, useAvailable });
         const job = await waitForInsightJob({ client, jobId: created.jobId, signal: controller.signal, onStatus: (status) => {
           if (spinner) spinner.text = `Insight job ${status.status}${status.progressStage ? ` (${status.progressStage})` : ""}...`;
         } });

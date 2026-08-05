@@ -22,6 +22,7 @@ async function run(argv: string[]) {
 describe("agent insights", () => {
   beforeEach(() => { postJsonMock.mockReset(); getJsonMock.mockReset(); writeInsightEvaluationMock.mockReset(); writeInsightEvaluationMock.mockResolvedValue({ directory: ".pa/evaluations/job-1", files: [] }); });
   it("requires --use-available for non-TTY incomplete coverage", async () => {
+    getJsonMock.mockResolvedValueOnce({ current_version_id: "version-current" });
     postJsonMock.mockResolvedValue({ targetType: "agent", targetId: "agent-1", window: null, agentVersionId: null, coverage: { business: { total: 2, usable: 1, included: 1 } }, requiresConfirmation: true });
     await expect(run(["agent", "insights", "agent-1"])).rejects.toThrow("--use-available");
   });
@@ -32,11 +33,39 @@ describe("agent insights", () => {
     await run(["agent", "insights", "agent-1", "--type", "design", "--version", "version-1", "--persist"]);
     expect(postJsonMock).toHaveBeenNthCalledWith(1, "/api/insight-jobs/preflight", expect.objectContaining({ insightTypes: ["design"], agentVersionId: "version-1" }));
     expect(postJsonMock).toHaveBeenNthCalledWith(2, "/api/insight-jobs", expect.objectContaining({ outputMode: "persist", insightTypes: ["design"] }));
+    expect(getJsonMock).toHaveBeenNthCalledWith(1, "/api/insight-jobs/job-1");
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("completed with status persisted"));
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining(".pa/evaluations/job-1"));
   });
+
+  it("resolves the current published version when --version is omitted", async () => {
+    postJsonMock.mockResolvedValueOnce({ targetType: "agent", targetId: "agent-1", window: null, agentVersionId: "version-current", coverage: { design: { total: 1, usable: 1, included: 1 } }, requiresConfirmation: false }).mockResolvedValueOnce({ jobId: "job-current", status: "queued" });
+    getJsonMock
+      .mockResolvedValueOnce({ current_version_id: "version-current", current_version_number: "v3", items: [] })
+      .mockResolvedValueOnce({ jobId: "job-current", status: "generated", progressStage: "completed" })
+      .mockResolvedValueOnce({
+        jobId: "job-current",
+        status: "generated",
+        progressStage: "completed",
+        errorKey: null,
+        result: {
+          schemaVersion: 1,
+          jobId: "job-current",
+          targetType: "agent",
+          targetId: "agent-1",
+          outputMode: "local",
+          components: {},
+          metadata: { inputBasis: {}, coverage: {}, startedAt: "", completedAt: "", durationMs: 0 },
+        },
+      });
+    await run(["agent", "insights", "agent-1", "--type", "design"]);
+    expect(getJsonMock).toHaveBeenNthCalledWith(1, "/api/agents/agent-1/versions");
+    expect(postJsonMock).toHaveBeenNthCalledWith(1, "/api/insight-jobs/preflight", expect.objectContaining({ agentVersionId: "version-current" }));
+    expect(postJsonMock).toHaveBeenNthCalledWith(2, "/api/insight-jobs", expect.objectContaining({ agentVersionId: "version-current" }));
+  });
   it("shows coverage when --use-available bypasses confirmation", async () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    getJsonMock.mockResolvedValueOnce({ current_version_id: "version-current" });
     postJsonMock.mockResolvedValueOnce({ targetType: "agent", targetId: "agent-1", window: null, agentVersionId: null, coverage: { business: { total: 3, usable: 2, included: 2 } }, requiresConfirmation: true }).mockResolvedValueOnce({ jobId: "job-1", status: "queued" });
     getJsonMock.mockResolvedValueOnce({ jobId: "job-1", status: "generated", progressStage: "completed" }).mockResolvedValueOnce({ jobId: "job-1", status: "generated", progressStage: "completed", errorKey: null, createdAt: "", startedAt: null, completedAt: null, result: { schemaVersion: 1, jobId: "job-1", targetType: "agent", targetId: "agent-1", outputMode: "local", components: {}, metadata: { inputBasis: {}, coverage: {}, startedAt: "", completedAt: "", durationMs: 0 } } });
     await run(["agent", "insights", "agent-1", "--use-available"]);
@@ -46,6 +75,7 @@ describe("agent insights", () => {
   it("does not print a success message for partial output", async () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    getJsonMock.mockResolvedValueOnce({ current_version_id: "version-current" });
     postJsonMock.mockResolvedValueOnce({ targetType: "agent", targetId: "agent-1", window: null, agentVersionId: null, coverage: {}, requiresConfirmation: false }).mockResolvedValueOnce({ jobId: "job-1", status: "queued" });
     getJsonMock.mockResolvedValueOnce({ jobId: "job-1", status: "partial", progressStage: "completed" }).mockResolvedValueOnce({ jobId: "job-1", status: "partial", progressStage: "completed", errorKey: null, createdAt: "", startedAt: null, completedAt: null, result: { schemaVersion: 1, jobId: "job-1", targetType: "agent", targetId: "agent-1", outputMode: "local", components: {}, metadata: { inputBasis: {}, coverage: {}, startedAt: "", completedAt: "", durationMs: 0 } } });
     await expect(run(["agent", "insights", "agent-1"])).rejects.toThrow("partial");
@@ -56,6 +86,7 @@ describe("agent insights", () => {
 
   it("reports a failed job with null result and keeps its output directory", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    getJsonMock.mockResolvedValueOnce({ current_version_id: "version-current" });
     postJsonMock.mockResolvedValueOnce({ targetType: "agent", targetId: "agent-1", window: null, agentVersionId: null, coverage: {}, requiresConfirmation: false }).mockResolvedValueOnce({ jobId: "job-failed", status: "queued" });
     getJsonMock.mockResolvedValueOnce({ jobId: "job-failed", status: "failed", progressStage: "failed" }).mockResolvedValueOnce({ jobId: "job-failed", status: "failed", progressStage: "failed", errorKey: "insightsGenerationFailed", result: null });
     writeInsightEvaluationMock.mockResolvedValueOnce({ directory: ".pa/evaluations/job-failed", files: [".pa/evaluations/job-failed/manifest.json"] });

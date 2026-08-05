@@ -66,6 +66,11 @@ export class PaApiClient {
           `Conflict. ${extractErrorMessage(body)}`,
           409,
         );
+      case 410:
+        if (extractErrorKey(body) === "insightsJobResultExpired") {
+          throw new ApiError("Insight job result has expired.", 410);
+        }
+        throw new ApiError(`Resource expired. ${extractErrorMessage(body)}`, 410);
       default:
         throw new ApiError(
           `Server error (${response.status}). ${extractErrorMessage(body)}`,
@@ -191,6 +196,15 @@ function extractErrorMessage(body: string): string {
     // not JSON
   }
   return "";
+}
+
+function extractErrorKey(body: string): string | null {
+  try {
+    const parsed = JSON.parse(body) as { errorKey?: unknown };
+    return typeof parsed.errorKey === "string" ? parsed.errorKey : null;
+  } catch {
+    return null;
+  }
 }
 
 function wrapNetworkError(err: unknown, serverUrl: string): Error {

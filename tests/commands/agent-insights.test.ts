@@ -1,0 +1,35 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Command } from "commander";
+
+const postJsonMock = vi.fn();
+const getJsonMock = vi.fn();
+const writeInsightEvaluationMock = vi.fn();
+vi.mock("../../src/lib/api-client.js", () => ({ PaApiClient: class { postJson = postJsonMock; getJson = getJsonMock; } }));
+vi.mock("../../src/lib/config.js", () => ({ loadConfig: () => ({ serverUrl: "http://localhost:3000", apiKey: "pa_test" }) }));
+vi.mock("../../src/lib/insight-output.js", () => ({
+  defaultInsightOutputRoot: () => ".pa/evaluations",
+  writeInsightEvaluation: writeInsightEvaluationMock,
+}));
+vi.mock("ora", () => ({ default: () => ({ start: () => ({ stop: vi.fn() }) }) }));
+
+async function run(argv: string[]) {
+  const { registerAgentCommands } = await import("../../src/commands/agent/index.js");
+  const program = new Command().exitOverride().option("--output <format>", "", "table").option("--server <url>", "");
+  registerAgentCommands(program);
+  await program.parseAsync(["node", "pa", ...argv], { from: "node" });
+}
+
+describe("agent insights", () => {
+  beforeEach(() => { postJsonMock.mockReset(); getJsonMock.mockReset(); writeInsightEvaluationMock.mockReset(); writeInsightEvaluationMock.mockResolvedValue({ directory: ".pa/evaluations/job-1", files: [] }); });
+  it("requires --use-available for non-TTY incomplete coverage", async () => {
+    postJsonMock.mockResolvedValue({ targetType: "agent", targetId: "agent-1", window: null, agentVersionId: null, coverage: { business: { total: 2, usable: 1, included: 1 } }, requiresConfirmation: true });
+    await expect(run(["agent", "insights", "agent-1"])).rejects.toThrow("--use-available");
+  });
+  it("passes selected type, version, and persist mode to the job API", async () => {
+    postJsonMock.mockResolvedValueOnce({ targetType: "agent", targetId: "agent-1", window: null, agentVersionId: "version-1", coverage: {}, requiresConfirmation: false }).mockResolvedValueOnce({ jobId: "job-1", status: "queued" });
+    getJsonMock.mockResolvedValueOnce({ jobId: "job-1", status: "persisted", progressStage: "completed" }).mockResolvedValueOnce({ jobId: "job-1", status: "persisted", progressStage: "completed", errorKey: null, createdAt: "", startedAt: null, completedAt: null, result: { schemaVersion: 1, jobId: "job-1", targetType: "agent", targetId: "agent-1", outputMode: "persist", components: {}, metadata: { inputBasis: {}, coverage: {}, startedAt: "", completedAt: "", durationMs: 0 } } });
+    await run(["agent", "insights", "agent-1", "--type", "design", "--version", "version-1", "--persist"]);
+    expect(postJsonMock).toHaveBeenNthCalledWith(1, "/api/insight-jobs/preflight", expect.objectContaining({ insightTypes: ["design"], agentVersionId: "version-1" }));
+    expect(postJsonMock).toHaveBeenNthCalledWith(2, "/api/insight-jobs", expect.objectContaining({ outputMode: "persist", insightTypes: ["design"] }));
+  });
+});

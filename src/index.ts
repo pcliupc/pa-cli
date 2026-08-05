@@ -13,6 +13,7 @@ import { registerAiCommands } from "./commands/ai/index.js";
 import { registerLiveArtifactCommands } from "./commands/live-artifact/index.js";
 import { registerLogsCommands } from "./commands/logs/index.js";
 import { registerUsageCommands } from "./commands/usage/index.js";
+import { registerInsightsCommands } from "./commands/insights/index.js";
 
 const packageJson = JSON.parse(
   fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -39,5 +40,6 @@ registerAiCommands(program);
 registerLiveArtifactCommands(program);
 registerLogsCommands(program);
 registerUsageCommands(program);
+registerInsightsCommands(program);
 
 program.parse();

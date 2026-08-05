@@ -64,6 +64,16 @@ describe("PaApiClient", () => {
     );
   });
 
+  it("reports expired insight job results without a generic server error", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ errorKey: "insightsJobResultExpired" }), { status: 410 }),
+    );
+
+    await expect(client.getJson("/api/insight-jobs/job-1/result")).rejects.toThrow(
+      "Insight job result has expired.",
+    );
+  });
+
   it("posts JSON payloads with the expected headers", async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: true }), { status: 200 }),

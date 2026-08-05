@@ -223,7 +223,7 @@ PACLI 可以调用平台已有的模型、密钥和默认 prompt，对单个 Ses
 
 #### local 与 persist
 
-- 默认是 `local`：生成结果保存在任务结果和本地评估目录中，不覆盖 `pa_session_insights` 或正式 Agent snapshot，Web 页面不会把它当作正式洞察展示。
+- 默认是 `local`：结果落到 `.pa/evaluations/<job-id>/`，同时保留在短期 generation job 结果中；不进入正式 Web 洞察页面，也不覆盖 `pa_session_insights` 或正式 Agent snapshot。需要读取任务结果时使用当前用户有权限的 CLI / 结果 API。
 - 显式传 `--persist`：生成成功后直接覆盖当前正式结果，同时仍把本次结果下载到本地，便于对照验证。
 - 两种模式都经过同一个平台 generation job、Runner、模型配置和默认 prompt；差别只在是否提交到正式洞察表。
 
@@ -278,7 +278,7 @@ pa agent insights <agent-id> --use-available
 
 #### 中断后恢复任务
 
-CLI 收到 `Ctrl-C`、等待超时或轮询网络失败时会停止本地等待，但平台任务仍以数据库状态为准。记下创建时输出的 job ID 后可恢复等待和下载：
+CLI 收到 `Ctrl-C`、等待超时或轮询网络失败时会停止本地等待，但平台任务仍以数据库状态为准。完成、失败等终态输出会包含 job ID；中断、超时或轮询失败时，错误提示也会给出可恢复的 job ID。CLI 不承诺在创建任务瞬间单独打印 job ID。取得 job ID 后可恢复等待和下载：
 
 ```bash
 pa insights job <job-id> --wait

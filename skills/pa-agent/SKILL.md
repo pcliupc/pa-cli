@@ -21,7 +21,7 @@ cliHelp: "pa agent --help"
 - **Private Skill**：智能体私有的技能，存储在智能体目录的 `skills/` 子目录中。
 - **Agent 洞察**：基于已有 Session Insight 生成的 business 和 design 两类聚合结果；始终使用平台已有模型、密钥和默认 prompt。
 - **覆盖率（Coverage）**：生成前显示 `total`、`usable`、`included`，说明窗口内总 Session、已有可用 Session Insight 和实际纳入生成的数量。
-- **local / persist**：`local` 是默认模式，只保留任务结果和本地评估文件；`persist` 必须显式指定，成功后覆盖对应正式 snapshot component。
+- **local / persist**：`local` 是默认模式，结果落到 `.pa/evaluations/<job-id>/` 并保留在短期任务结果中，不进入正式 Web 洞察页面；`persist` 必须显式指定，成功后覆盖对应正式 snapshot component。
 
 版本语义规则：
 
@@ -177,7 +177,7 @@ pa agent insights <agent-id> --output-dir ./insight-evaluations
 - `business/insights.md`：业务洞察（如请求）
 - `design/insights.md`：设计洞察（如请求）
 
-如果 CLI 因 `Ctrl-C`、等待超时或轮询网络失败停止等待，平台任务仍以数据库状态为准。使用创建时输出的 job ID 恢复：
+如果 CLI 因 `Ctrl-C`、等待超时或轮询网络失败停止等待，平台任务仍以数据库状态为准。完成、失败等终态输出会包含 job ID；中断、超时或轮询失败时，错误提示也会给出恢复所需的 job ID。CLI 不承诺在创建任务瞬间单独打印 job ID。取得 job ID 后恢复：
 
 ```bash
 pa insights job <job-id> --wait

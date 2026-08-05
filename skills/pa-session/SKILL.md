@@ -22,7 +22,7 @@ cliHelp: "pa session --help"
 - **反馈（Feedback）**：用户和管理员对会话结果的评价，包含多维度评分。
 - **Workspace 文件**：智能体在 session 工作区中生成的文件，可用于排查执行结果或下载做离线分析。不包含用户上传的 `assets/`。
 - **Session 摘要任务**：使用平台已有模型、密钥和默认 prompt，为单个 Session 生成摘要和诊断；CLI 不接受这些配置的临时覆盖。
-- **local / persist**：`local` 是默认模式，只保留任务结果和本地评估文件；`persist` 必须显式指定，成功后覆盖当前正式 Session Insight。
+- **local / persist**：`local` 是默认模式，结果落到 `.pa/evaluations/<job-id>/` 并保留在短期任务结果中，不进入正式 Web 洞察页面；`persist` 必须显式指定，成功后覆盖当前正式 Session Insight。
 
 版本相关规则：
 
@@ -170,7 +170,7 @@ pa session summarize <session-id> --output-dir ./insight-evaluations
 
 `local` 模式不会把 CLI 生成内容写入正式洞察表，因此 Web 页面不会把它展示为当前正式摘要。`--persist` 会在成功生成后直接覆盖当前正式结果；使用前先确认目标 Session 是否正确。
 
-生成命令会等待异步任务完成。若收到 `Ctrl-C`、等待超时或轮询网络失败，平台任务不会因为 CLI 停止等待而自动取消。使用命令输出中的 job ID 恢复等待和下载：
+生成命令会等待异步任务完成。若收到 `Ctrl-C`、等待超时或轮询网络失败，平台任务不会因为 CLI 停止等待而自动取消。完成、失败等终态输出会包含 job ID；中断、超时或轮询失败时，错误提示也会给出恢复所需的 job ID。CLI 不承诺在创建任务瞬间单独打印 job ID。取得 job ID 后恢复等待和下载：
 
 ```bash
 pa insights job <job-id> --wait

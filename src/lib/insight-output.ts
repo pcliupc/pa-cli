@@ -74,6 +74,12 @@ export async function writeInsightEvaluation(input: {
     }
   } else {
     await writeComponent(directory, "business", result.components.business, files);
+    const businessResult = result.components.business?.result;
+    if (businessResult && businessResult.analysisProfile) {
+      const profilePath = path.join(directory, "business", "analysis-profile.json");
+      await writeFile(profilePath, `${JSON.stringify(businessResult.analysisProfile, null, 2)}\n`, "utf8");
+      files.push(profilePath);
+    }
     await writeComponent(directory, "design", result.components.design, files);
   }
 

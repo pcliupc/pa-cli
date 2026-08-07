@@ -3,29 +3,28 @@ import ora from "ora";
 
 import { PaApiClient } from "../../lib/api-client.js";
 import { loadConfig } from "../../lib/config.js";
-import { confirmUseAvailable, createInsightJob, formatInsightCoverage, formatInsightJobOutcome, isSuccessfulInsightJob, preflightInsightJob, resolveCurrentAgentVersionId, type InsightJobType, waitForInsightJob } from "../../lib/insight-jobs.js";
+import { confirmUseAvailable, createInsightJob, formatInsightCoverage, formatInsightJobOutcome, isSuccessfulInsightJob, preflightInsightJob, type InsightJobType, waitForInsightJob } from "../../lib/insight-jobs.js";
 import { defaultInsightOutputRoot, writeInsightEvaluation } from "../../lib/insight-output.js";
 import type { OutputFormat } from "../../lib/output.js";
 
-function selectedTypes(type: "business" | "design" | "all"): InsightJobType[] {
-  return type === "all" ? ["business", "design"] : [type];
-}
-
 export function registerAgentInsightsCommand(agentCmd: Command): void {
-  agentCmd.command("insights").description("Generate business and design insights for one agent")
+  agentCmd.command("insights").description("Generate business insights for one agent")
     .argument("<id>", "Agent ID").option("--persist", "Overwrite the formal agent insight")
-    .option("--type <type>", "business, design, or all", "all").option("--version <id>", "Agent version ID")
+    .option("--type <type>", "business, design, or all", "all")
     .option("--use-available", "Continue when only available Session Insights can be used")
     .option("--output-dir <path>", "Directory for local evaluation output")
-    .action(async (agentId: string, options: { persist?: boolean; type?: "business" | "design" | "all"; version?: string; useAvailable?: boolean; outputDir?: string }) => {
+    .action(async (agentId: string, options: { persist?: boolean; type?: "business" | "design" | "all"; useAvailable?: boolean; outputDir?: string }) => {
       const type = options.type ?? "all";
       if (type !== "business" && type !== "design" && type !== "all") throw new Error("--type must be business, design, or all.");
+      if (type === "design") {
+        throw new Error("insightsDesignMergedIntoBusiness: design insights are now included as supporting evidence in business insights.");
+      }
       const config = loadConfig();
       const parentOpts = agentCmd.parent?.opts?.() as { output?: string; server?: string } | undefined;
       const outputFormat = (parentOpts?.output ?? "table") as OutputFormat;
       const client = new PaApiClient({ serverUrl: parentOpts?.server ?? config.serverUrl, apiKey: config.apiKey });
-      const insightTypes = selectedTypes(type);
-      const agentVersionId = options.version ?? await resolveCurrentAgentVersionId({ client, agentId });
+      const insightTypes: InsightJobType[] = ["business"];
+      const agentVersionId: string | undefined = undefined;
       const preflight = await preflightInsightJob({ client, targetType: "agent", targetId: agentId, insightTypes, agentVersionId });
       if (outputFormat !== "json") console.log(formatInsightCoverage(preflight));
       let useAvailable = options.useAvailable === true;

@@ -68,6 +68,9 @@ export type KnowledgeFolder = {
   id: string;
   name: string;
   parentId: string | null;
+  spaceId: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type KnowledgeFolderResponse = {

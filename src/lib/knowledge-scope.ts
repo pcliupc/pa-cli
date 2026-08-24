@@ -18,5 +18,7 @@ export function addKnowledgeScopeQuery(
   params.set("scope", target.target);
   if (target.spaceId !== undefined) {
     params.set("spaceId", target.spaceId);
+  } else {
+    params.delete("spaceId");
   }
 }

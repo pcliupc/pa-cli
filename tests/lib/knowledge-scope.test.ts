@@ -26,6 +26,12 @@ describe("knowledge scope", () => {
     expect(params.toString()).toBe("scope=personal");
   });
 
+  it("removes a stale Space ID when applying personal scope", () => {
+    const params = new URLSearchParams("spaceId=stale-space");
+    addKnowledgeScopeQuery(params);
+    expect(params.toString()).toBe("scope=personal");
+  });
+
   it("builds a Space scope query", () => {
     const params = new URLSearchParams();
     addKnowledgeScopeQuery(params, "space-1");

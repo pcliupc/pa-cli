@@ -33,12 +33,6 @@ export function registerKnowledgeUpdateCommand(knowledgeCmd: Command): void {
         || options.summary !== undefined
         || options.folder !== undefined
         || options.rootFolder === true;
-      if (inputPath && metadataProvided) {
-        throw new Error("cannot combine content and metadata options");
-      }
-      if (!inputPath && !metadataProvided) {
-        throw new Error("provide a content path or at least one metadata option");
-      }
 
       const config = loadConfig();
       const parentOpts = knowledgeCmd.parent?.opts?.() as {
@@ -53,6 +47,13 @@ export function registerKnowledgeUpdateCommand(knowledgeCmd: Command): void {
       const spinner = ora("Updating knowledge...").start();
 
       try {
+        if (inputPath && metadataProvided) {
+          throw new Error("cannot combine content and metadata options");
+        }
+        if (!inputPath && !metadataProvided) {
+          throw new Error("provide a content path or at least one metadata option");
+        }
+
         let response: KnowledgeDocumentResponse | { document: KnowledgeDocumentResponse["document"] };
         if (inputPath) {
           const current = await client.getJson<KnowledgeDocumentResponse>(

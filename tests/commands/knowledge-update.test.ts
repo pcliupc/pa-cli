@@ -9,6 +9,7 @@ const patchJsonMock = vi.fn();
 const outputDataMock = vi.fn();
 const spinnerStopMock = vi.fn();
 const readKnowledgeContentMock = vi.fn();
+const printKnowledgeErrorMock = vi.fn();
 
 vi.mock("../../src/lib/api-client.js", () => ({
   PaApiClient: class {
@@ -33,7 +34,7 @@ vi.mock("../../src/lib/output.js", async () => {
 });
 
 vi.mock("../../src/lib/knowledge-errors.js", () => ({
-  printKnowledgeError: vi.fn(),
+  printKnowledgeError: printKnowledgeErrorMock,
 }));
 
 vi.mock("ora", () => ({
@@ -62,6 +63,7 @@ describe("knowledge update command", () => {
     outputDataMock.mockReset();
     spinnerStopMock.mockReset();
     readKnowledgeContentMock.mockReset();
+    printKnowledgeErrorMock.mockReset();
   });
 
   it("updates content with the current revision", async () => {
@@ -131,11 +133,53 @@ describe("knowledge update command", () => {
     });
   });
 
+  it("reads content from stdin and sends only content plus the current revision", async () => {
+    getJsonMock.mockResolvedValue({
+      document: { id: "doc-1", type: "doc", currentRevisionId: "rev-4" },
+    });
+    readKnowledgeContentMock.mockResolvedValue("# From stdin\n");
+    patchJsonMock.mockResolvedValue({ document: { id: "doc-1", type: "doc" } });
+
+    await runKnowledgeUpdate(["knowledge", "update", "doc-1", "-"]);
+
+    expect(readKnowledgeContentMock).toHaveBeenCalledWith("-");
+    expect(patchJsonMock).toHaveBeenCalledWith("/api/knowledge/doc-1", {
+      content: "# From stdin\n",
+      expectedCurrentRevisionId: "rev-4",
+    });
+  });
+
   it("rejects content and metadata options together", async () => {
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("process.exit");
+    });
+
     await expect(
       runKnowledgeUpdate(["knowledge", "update", "doc-1", "next.md", "--title", "New"]),
-    ).rejects.toThrow(/cannot combine content and metadata/);
+    ).rejects.toThrow("process.exit");
+    expect(printKnowledgeErrorMock).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "cannot combine content and metadata options" }),
+      "table",
+    );
     expect(getJsonMock).not.toHaveBeenCalled();
     expect(patchJsonMock).not.toHaveBeenCalled();
+    exitSpy.mockRestore();
+  });
+
+  it("formats missing content and metadata as a CLI error", async () => {
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("process.exit");
+    });
+
+    await expect(
+      runKnowledgeUpdate(["knowledge", "update", "doc-1"]),
+    ).rejects.toThrow("process.exit");
+    expect(printKnowledgeErrorMock).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "provide a content path or at least one metadata option" }),
+      "table",
+    );
+    expect(getJsonMock).not.toHaveBeenCalled();
+    expect(patchJsonMock).not.toHaveBeenCalled();
+    exitSpy.mockRestore();
   });
 });

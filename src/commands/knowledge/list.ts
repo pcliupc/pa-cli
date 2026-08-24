@@ -2,6 +2,7 @@ import { Command } from "commander";
 import ora from "ora";
 import { PaApiClient } from "../../lib/api-client.js";
 import { loadConfig } from "../../lib/config.js";
+import { printKnowledgeError } from "../../lib/knowledge-errors.js";
 import { addKnowledgeScopeQuery } from "../../lib/knowledge-scope.js";
 import type { KnowledgeListResponse } from "../../lib/knowledge-types.js";
 import { outputData, type OutputFormat } from "../../lib/output.js";
@@ -66,7 +67,7 @@ export function registerKnowledgeListCommand(knowledgeCmd: Command): void {
         );
       } catch (error) {
         spinner.stop();
-        console.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+        printKnowledgeError(error, outputFormat);
         process.exit(1);
       }
     });

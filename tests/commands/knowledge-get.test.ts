@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Command } from "commander";
 
 const getJsonMock = vi.fn();
+const clientConstructorMock = vi.fn();
 const outputDataMock = vi.fn();
 const spinnerStopMock = vi.fn();
 
@@ -19,6 +20,10 @@ vi.mock("../../src/lib/api-client.js", () => ({
     }
   },
   PaApiClient: class {
+    constructor(options: unknown) {
+      clientConstructorMock(options);
+    }
+
     getJson = getJsonMock;
   },
 }));
@@ -85,6 +90,7 @@ const baseDocument = {
 describe("knowledge get command", () => {
   beforeEach(() => {
     getJsonMock.mockReset();
+    clientConstructorMock.mockReset();
     outputDataMock.mockReset();
     spinnerStopMock.mockReset();
   });
@@ -116,6 +122,20 @@ describe("knowledge get command", () => {
       expect.any(Array),
       expect.any(Array),
     );
+  });
+
+  it("passes the global server override and configured API key to the client", async () => {
+    getJsonMock.mockResolvedValue({
+      document: baseDocument,
+      capabilities: { viewHistory: false, restoreRevision: false },
+    });
+
+    await runKnowledgeGet(["--server", "https://override.example", "knowledge", "get", "doc-1"]);
+
+    expect(clientConstructorMock).toHaveBeenCalledWith({
+      serverUrl: "https://override.example",
+      apiKey: "pa_test123",
+    });
   });
 
   it("writes Markdown content to the requested output file", async () => {

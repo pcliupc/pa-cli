@@ -2,11 +2,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Command } from "commander";
 
 const getJsonMock = vi.fn();
+const clientConstructorMock = vi.fn();
 const outputDataMock = vi.fn();
 const spinnerStopMock = vi.fn();
 
 vi.mock("../../src/lib/api-client.js", () => ({
+  ApiError: class ApiError extends Error {
+    status: number;
+    errorKey?: string;
+    constructor(message: string, status: number, errorKey?: string) {
+      super(message);
+      this.status = status;
+      this.errorKey = errorKey;
+    }
+  },
   PaApiClient: class {
+    constructor(options: unknown) {
+      clientConstructorMock(options);
+    }
+
     getJson = getJsonMock;
   },
 }));
@@ -49,6 +63,7 @@ async function runKnowledgeList(argv: string[]) {
 describe("knowledge list command", () => {
   beforeEach(() => {
     getJsonMock.mockReset();
+    clientConstructorMock.mockReset();
     outputDataMock.mockReset();
     spinnerStopMock.mockReset();
   });
@@ -114,5 +129,35 @@ describe("knowledge list command", () => {
       expect.any(Array),
       expect.any(Array),
     );
+  });
+
+  it("passes the global server override and configured API key to the client", async () => {
+    getJsonMock.mockResolvedValue({ items: [], total: 0, limit: 50, offset: 0 });
+
+    await runKnowledgeList(["--server", "https://override.example", "knowledge", "list"]);
+
+    expect(clientConstructorMock).toHaveBeenCalledWith({
+      serverUrl: "https://override.example",
+      apiKey: "pa_test123",
+    });
+  });
+
+  it("formats API errors through the JSON knowledge error contract", async () => {
+    getJsonMock.mockRejectedValue(new Error("backend unavailable"));
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("process.exit");
+    });
+
+    await expect(
+      runKnowledgeList(["--output", "json", "knowledge", "list"]),
+    ).rejects.toThrow("process.exit");
+
+    expect(logSpy).toHaveBeenCalledWith(JSON.stringify({
+      status: 500,
+      message: "backend unavailable",
+    }, null, 2));
+    exitSpy.mockRestore();
+    logSpy.mockRestore();
   });
 });

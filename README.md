@@ -176,6 +176,37 @@ pa skill delete my-skill                   # 需确认
 pa skill delete my-skill -f                # 跳过确认
 ```
 
+### Knowledge 资料库
+
+```bash
+pa knowledge list [--space <space-id>] [--folder <folder-id>] [--search <text>] [--limit <n>] [--offset <n>]
+pa knowledge get <document-id> [--content] [-o <file>]
+pa knowledge create <path|-> [--type md|csv] [--title <title>] [--summary <summary>] [--folder <folder-id>] [--space <space-id>]
+pa knowledge update <document-id> [<path|->]
+pa knowledge update <document-id> [--title <title>] [--summary <summary>] [--folder <folder-id>] [--root-folder]
+pa knowledge delete <document-id> [--force]
+
+pa knowledge folder list [--parent <folder-id>] [--space <space-id>]
+pa knowledge folder create <name> [--parent <folder-id>] [--space <space-id>]
+pa knowledge folder delete <folder-id> [--space <space-id>] [--force]
+```
+
+Knowledge 文本资料支持 `md` 和 `csv`。`.md`/`.markdown` 文件自动识别为 `md`，`.csv` 文件自动识别为 `csv`；也可以用 `--type md` 或 `--type csv` 显式指定。CLI 的 `md` 类型会映射为 Web API 的 `doc` 类型。使用 stdin（路径为 `-`）时必须显式提供 `--type` 和 `--title`，例如：
+
+```bash
+pa knowledge create - --type md --title "临时资料" < ./notes.md
+```
+
+不带 `--space` 时，创建资料或目录到当前用户的个人资料库；带 `--space <space-id>` 时，目标是指定 Space。文档的 `get`、`update` 和 `delete` 按文档自身的权限校验，不需要重复传入 `--space`。`--folder` 将资料放入指定目录；`--root-folder` 将资料移回根目录。目录命令的 `--parent` 用于创建或列出指定父目录下的目录。
+
+`pa knowledge get <document-id> --content` 将 Markdown/CSV 正文输出到 stdout；配合 `-o <file>` 可写入文件并自动创建父目录：
+
+```bash
+pa knowledge get <document-id> --content -o ./backup.md
+```
+
+删除文档和目录时，交互式终端会要求确认；非交互环境没有 `--force` 时会直接拒绝删除。`--force` 只跳过 CLI 确认，不绕过服务端权限、目录非空或 revision 并发校验。
+
 ### 会话管理
 
 ```bash

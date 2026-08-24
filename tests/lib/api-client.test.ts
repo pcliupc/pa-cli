@@ -69,9 +69,10 @@ describe("PaApiClient", () => {
       new Response(JSON.stringify({ errorKey: "insightsJobResultExpired" }), { status: 410 }),
     );
 
-    await expect(client.getJson("/api/insight-jobs/job-1/result")).rejects.toThrow(
-      "Insight job result has expired.",
-    );
+    await expect(client.getJson("/api/insight-jobs/job-1/result")).rejects.toMatchObject({
+      message: "Insight job result has expired.",
+      errorKey: "insightsJobResultExpired",
+    });
   });
 
   it("posts JSON payloads with the expected headers", async () => {
@@ -137,6 +138,16 @@ describe("PaApiClient", () => {
         body: JSON.stringify({ expectedCurrentRevisionId: "rev-2" }),
       }),
     );
+  });
+
+  it("omits body and content type for an empty-body DELETE", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
+
+    await expect(client.deleteJson("/api/knowledge/doc-1")).resolves.toEqual({});
+
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(request).not.toHaveProperty("body");
+    expect(request.headers).not.toHaveProperty("Content-Type");
   });
 
   it("preserves errorKey on API errors", async () => {

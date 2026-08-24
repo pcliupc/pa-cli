@@ -117,14 +117,17 @@ export class PaApiClient {
 
   async deleteJson<T = unknown>(apiPath: string, body?: unknown): Promise<T> {
     try {
-      const response = await this.fetchFn(this.buildUrl(apiPath), {
+      const headers = this.headers();
+      const request: RequestInit = {
         method: "DELETE",
-        headers: {
-          ...this.headers(),
-          ...(body === undefined ? {} : { "Content-Type": "application/json" }),
-        },
-        body: body === undefined ? undefined : JSON.stringify(body),
-      });
+        headers,
+      };
+      if (body !== undefined) {
+        headers["Content-Type"] = "application/json";
+        request.body = JSON.stringify(body);
+      }
+
+      const response = await this.fetchFn(this.buildUrl(apiPath), request);
       await this.handleResponse(response);
 
       const responseBody = await response.text();

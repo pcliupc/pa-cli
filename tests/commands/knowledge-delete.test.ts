@@ -72,6 +72,11 @@ describe("knowledge delete command", () => {
 
     await runKnowledgeDelete(["knowledge", "delete", "doc-1", "--force"]);
 
+    expect(confirmDestructiveActionMock).toHaveBeenCalledTimes(1);
+    expect(confirmDestructiveActionMock).toHaveBeenCalledWith(
+      expect.stringContaining("doc-1"),
+      { force: true },
+    );
     expect(getJsonMock).toHaveBeenCalledWith("/api/knowledge/doc-1");
     expect(deleteJsonMock).toHaveBeenCalledWith("/api/knowledge/doc-1", {
       expectedCurrentRevisionId: "rev-4",
@@ -80,24 +85,25 @@ describe("knowledge delete command", () => {
 
   it("confirms before reading and deleting without force", async () => {
     getJsonMock.mockResolvedValue({ document: { id: "doc-1", currentRevisionId: "rev-1" } });
-    deleteJsonMock.mockResolvedValue({ deleted: true, id: "doc-1" });
     const order: string[] = [];
-    confirmDestructiveActionMock.mockImplementation(async () => {
+    confirmDestructiveActionMock.mockImplementation(async (question: string, options: unknown) => {
       order.push("confirm");
+      expect(question).toContain("doc-1");
+      expect(options).toEqual(expect.objectContaining({ force: false }));
       return true;
     });
     getJsonMock.mockImplementation(async () => {
       order.push("get");
       return { document: { id: "doc-1", currentRevisionId: "rev-1" } };
     });
+    deleteJsonMock.mockImplementation(async () => {
+      order.push("delete");
+      return { deleted: true, id: "doc-1" };
+    });
 
     await runKnowledgeDelete(["knowledge", "delete", "doc-1"]);
 
-    expect(confirmDestructiveActionMock).toHaveBeenCalledWith(
-      expect.stringContaining("doc-1"),
-      expect.objectContaining({ force: false }),
-    );
-    expect(order).toEqual(["confirm", "get"]);
+    expect(order).toEqual(["confirm", "get", "delete"]);
   });
 
   it("requires a current revision before sending DELETE", async () => {

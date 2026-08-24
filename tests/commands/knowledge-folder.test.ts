@@ -141,10 +141,36 @@ describe("knowledge folder commands", () => {
       "knowledge", "folder", "delete", "folder-1", "--force",
     ]);
 
+    expect(confirmDestructiveActionMock).toHaveBeenCalledTimes(1);
+    expect(confirmDestructiveActionMock).toHaveBeenCalledWith(
+      expect.stringContaining("folder-1"),
+      { force: true },
+    );
     expect(deleteJsonMock).toHaveBeenCalledWith(
       "/api/knowledge/folders/folder-1?scope=personal",
     );
     expect(deleteJsonMock.mock.calls[0]).toHaveLength(1);
+  });
+
+  it("confirms before deleting a personal folder without force", async () => {
+    const order: string[] = [];
+    confirmDestructiveActionMock.mockImplementation(async (question: string, options: unknown) => {
+      order.push("confirm");
+      expect(question).toContain("folder-1");
+      expect(options).toEqual(expect.objectContaining({ force: false }));
+      return true;
+    });
+    deleteJsonMock.mockImplementation(async () => {
+      order.push("delete");
+      return { deleted: true, id: "folder-1" };
+    });
+
+    await runKnowledgeFolder(["knowledge", "folder", "delete", "folder-1"]);
+
+    expect(order).toEqual(["confirm", "delete"]);
+    expect(deleteJsonMock).toHaveBeenCalledWith(
+      "/api/knowledge/folders/folder-1?scope=personal",
+    );
   });
 
   it("preserves the server folder-not-empty error", async () => {

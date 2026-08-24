@@ -25,7 +25,7 @@ export function registerKnowledgeCreateCommand(knowledgeCmd: Command): void {
     .action(async (
       inputPath: string,
       options: {
-        type?: "md" | "csv";
+        type?: string;
         title?: string;
         summary?: string;
         folder?: string;
@@ -45,6 +45,12 @@ export function registerKnowledgeCreateCommand(knowledgeCmd: Command): void {
       const spinner = ora("Creating knowledge...").start();
 
       try {
+        if (options.type !== undefined
+          && options.type !== "md"
+          && options.type !== "csv") {
+          throw new Error("--type must be md or csv.");
+        }
+
         const input = await readKnowledgeInput(inputPath, {
           type: options.type,
           title: options.title,

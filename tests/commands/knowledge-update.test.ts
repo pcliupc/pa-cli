@@ -118,6 +118,26 @@ describe("knowledge update command", () => {
     expect(patchJsonMock).toHaveBeenCalledWith("/api/knowledge/doc-1", { folderId: null });
   });
 
+  it("rejects folder and root-folder together without patching", async () => {
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("process.exit");
+    });
+
+    await expect(
+      runKnowledgeUpdate([
+        "knowledge", "update", "doc-1", "--folder", "folder-2", "--root-folder",
+      ]),
+    ).rejects.toThrow("process.exit");
+
+    expect(printKnowledgeErrorMock).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "--folder and --root-folder cannot be used together." }),
+      "table",
+    );
+    expect(getJsonMock).not.toHaveBeenCalled();
+    expect(patchJsonMock).not.toHaveBeenCalled();
+    exitSpy.mockRestore();
+  });
+
   it("accepts CSV content and does not send a type field", async () => {
     getJsonMock.mockResolvedValue({
       document: { id: "doc-1", type: "csv", currentRevisionId: "rev-1" },

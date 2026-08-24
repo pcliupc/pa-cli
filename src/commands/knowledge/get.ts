@@ -36,6 +36,10 @@ export function registerKnowledgeGetCommand(knowledgeCmd: Command): void {
       const spinner = ora("Loading knowledge document...").start();
 
       try {
+        if (options.outputFile && !options.content) {
+          throw new Error("--output-file requires --content.");
+        }
+
         const response = await client.getJson<KnowledgeDocumentResponse>(
           `/api/knowledge/${documentId}`,
         );
@@ -52,10 +56,11 @@ export function registerKnowledgeGetCommand(knowledgeCmd: Command): void {
           if (options.outputFile) {
             fs.mkdirSync(path.dirname(options.outputFile), { recursive: true });
             fs.writeFileSync(options.outputFile, response.document.content, "utf8");
-          } else {
+          } else if (outputFormat !== "json") {
             process.stdout.write(response.document.content);
           }
-          return;
+
+          if (outputFormat !== "json") return;
         }
 
         outputData(

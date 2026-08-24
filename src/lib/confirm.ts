@@ -13,9 +13,10 @@ export async function confirmDestructiveAction(
 
   const input = options.input ?? process.stdin;
   const output = options.output ?? process.stdout;
-  const isTTY = Boolean((input as NodeJS.ReadableStream & { isTTY?: boolean }).isTTY);
-  const interactive = options.interactive ?? isTTY;
-  if (!interactive || !isTTY) {
+  const inputIsTTY = Boolean((input as NodeJS.ReadableStream & { isTTY?: boolean }).isTTY);
+  const outputIsTTY = Boolean((output as NodeJS.WritableStream & { isTTY?: boolean }).isTTY);
+  const interactive = options.interactive ?? (inputIsTTY && outputIsTTY);
+  if (!interactive) {
     throw new Error("Destructive actions are non-interactive; use --force.");
   }
 

@@ -47,6 +47,9 @@ export function registerKnowledgeUpdateCommand(knowledgeCmd: Command): void {
       const spinner = ora("Updating knowledge...").start();
 
       try {
+        if (options.folder !== undefined && options.rootFolder === true) {
+          throw new Error("--folder and --root-folder cannot be used together.");
+        }
         if (inputPath && metadataProvided) {
           throw new Error("cannot combine content and metadata options");
         }

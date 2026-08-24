@@ -167,6 +167,68 @@ describe("knowledge get command", () => {
     writeSpy.mockRestore();
   });
 
+  it("preserves the complete response envelope for JSON content output", async () => {
+    const response = {
+      document: baseDocument,
+      capabilities: { viewHistory: true, restoreRevision: false },
+    };
+    getJsonMock.mockResolvedValue(response);
+    const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+    await runKnowledgeGet([
+      "--output", "json", "knowledge", "get", "doc-1", "--content",
+    ]);
+
+    expect(writeSpy).not.toHaveBeenCalled();
+    expect(outputDataMock).toHaveBeenCalledWith(
+      response,
+      "json",
+      expect.any(Array),
+      expect.any(Array),
+    );
+    writeSpy.mockRestore();
+  });
+
+  it("writes content to a file and preserves the JSON response envelope", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "pa-cli-knowledge-get-json-"));
+    const outputPath = path.join(tempDir, "nested", "guide.md");
+    const response = {
+      document: baseDocument,
+      capabilities: { viewHistory: true, restoreRevision: false },
+    };
+    getJsonMock.mockResolvedValue(response);
+
+    await runKnowledgeGet([
+      "--output", "json", "knowledge", "get", "doc-1",
+      "--content", "-o", outputPath,
+    ]);
+
+    expect(fs.readFileSync(outputPath, "utf8")).toBe("# Guide\n");
+    expect(outputDataMock).toHaveBeenCalledWith(
+      response,
+      "json",
+      expect.any(Array),
+      expect.any(Array),
+    );
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it("rejects an output file without content before fetching metadata", async () => {
+    const errorSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("process.exit");
+    });
+
+    await expect(
+      runKnowledgeGet(["knowledge", "get", "doc-1", "-o", "guide.md"]),
+    ).rejects.toThrow("process.exit");
+
+    expect(getJsonMock).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith("Error: --output-file requires --content.");
+    exitSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
   it.each([
     ["page", "Page content must be edited through Live Artifact."],
     ["file", "Binary knowledge files cannot be edited as text."],

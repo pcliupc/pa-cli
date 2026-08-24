@@ -8,6 +8,7 @@ const postJsonMock = vi.fn();
 const outputDataMock = vi.fn();
 const spinnerStopMock = vi.fn();
 const readKnowledgeInputMock = vi.fn();
+const printKnowledgeErrorMock = vi.fn();
 
 vi.mock("../../src/lib/api-client.js", () => ({
   PaApiClient: class {
@@ -31,7 +32,7 @@ vi.mock("../../src/lib/output.js", async () => {
 });
 
 vi.mock("../../src/lib/knowledge-errors.js", () => ({
-  printKnowledgeError: vi.fn(),
+  printKnowledgeError: printKnowledgeErrorMock,
 }));
 
 vi.mock("ora", () => ({
@@ -59,6 +60,7 @@ describe("knowledge create command", () => {
     outputDataMock.mockReset();
     spinnerStopMock.mockReset();
     readKnowledgeInputMock.mockReset();
+    printKnowledgeErrorMock.mockReset();
   });
 
   it("creates Markdown in a Space using API type doc", async () => {
@@ -133,5 +135,25 @@ describe("knowledge create command", () => {
       type: "md",
       title: "Piped guide",
     });
+  });
+
+  it("rejects an invalid runtime type without creating a document", async () => {
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("process.exit");
+    });
+
+    await expect(
+      runKnowledgeCreate([
+        "knowledge", "create", "guide.txt", "--type", "json",
+      ]),
+    ).rejects.toThrow("process.exit");
+
+    expect(printKnowledgeErrorMock).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "--type must be md or csv." }),
+      "table",
+    );
+    expect(readKnowledgeInputMock).not.toHaveBeenCalled();
+    expect(postJsonMock).not.toHaveBeenCalled();
+    exitSpy.mockRestore();
   });
 });

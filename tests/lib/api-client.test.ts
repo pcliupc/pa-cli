@@ -117,6 +117,41 @@ describe("PaApiClient", () => {
     );
   });
 
+  it("sends an optional JSON body with DELETE", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ deleted: true }), { status: 200 }),
+    );
+
+    await client.deleteJson("/api/knowledge/doc-1", {
+      expectedCurrentRevisionId: "rev-2",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:3000/api/knowledge/doc-1",
+      expect.objectContaining({
+        method: "DELETE",
+        headers: expect.objectContaining({
+          Authorization: "Bearer pa_test123",
+          "Content-Type": "application/json",
+        }),
+        body: JSON.stringify({ expectedCurrentRevisionId: "rev-2" }),
+      }),
+    );
+  });
+
+  it("preserves errorKey on API errors", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ errorKey: "knowledge.revisionConflict" }), {
+        status: 409,
+      }),
+    );
+
+    await expect(client.getJson("/api/knowledge/doc-1")).rejects.toMatchObject({
+      status: 409,
+      errorKey: "knowledge.revisionConflict",
+    });
+  });
+
   it("handles network errors", async () => {
     fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
     await expect(client.getJson("/api/agents")).rejects.toThrow(

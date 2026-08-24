@@ -11,6 +11,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly errorKey?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -48,33 +49,43 @@ export class PaApiClient {
       body = "";
     }
 
+    const errorKey = extractErrorKey(body);
+
     switch (response.status) {
       case 401:
         throw new ApiError(
           'Authentication failed. Run "pa config set apiKey <key>" to configure.',
           401,
+          errorKey,
         );
       case 403:
-        throw new ApiError("Permission denied.", 403);
+        throw new ApiError("Permission denied.", 403, errorKey);
       case 404:
         throw new ApiError(
           `Resource not found. ${extractErrorMessage(body)}`,
           404,
+          errorKey,
         );
       case 409:
         throw new ApiError(
           `Conflict. ${extractErrorMessage(body)}`,
           409,
+          errorKey,
         );
       case 410:
-        if (extractErrorKey(body) === "insightsJobResultExpired") {
-          throw new ApiError("Insight job result has expired.", 410);
+        if (errorKey === "insightsJobResultExpired") {
+          throw new ApiError("Insight job result has expired.", 410, errorKey);
         }
-        throw new ApiError(`Resource expired. ${extractErrorMessage(body)}`, 410);
+        throw new ApiError(
+          `Resource expired. ${extractErrorMessage(body)}`,
+          410,
+          errorKey,
+        );
       default:
         throw new ApiError(
           `Server error (${response.status}). ${extractErrorMessage(body)}`,
           response.status,
+          errorKey,
         );
     }
   }
@@ -104,16 +115,20 @@ export class PaApiClient {
     }
   }
 
-  async deleteJson<T = unknown>(apiPath: string): Promise<T> {
+  async deleteJson<T = unknown>(apiPath: string, body?: unknown): Promise<T> {
     try {
       const response = await this.fetchFn(this.buildUrl(apiPath), {
         method: "DELETE",
-        headers: this.headers(),
+        headers: {
+          ...this.headers(),
+          ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
       });
       await this.handleResponse(response);
 
-      const body = await response.text();
-      return (body ? JSON.parse(body) : {}) as T;
+      const responseBody = await response.text();
+      return (responseBody ? JSON.parse(responseBody) : {}) as T;
     } catch (err) {
       throw wrapNetworkError(err, this.serverUrl);
     }
@@ -198,12 +213,12 @@ function extractErrorMessage(body: string): string {
   return "";
 }
 
-function extractErrorKey(body: string): string | null {
+function extractErrorKey(body: string): string | undefined {
   try {
     const parsed = JSON.parse(body) as { errorKey?: unknown };
-    return typeof parsed.errorKey === "string" ? parsed.errorKey : null;
+    return typeof parsed.errorKey === "string" ? parsed.errorKey : undefined;
   } catch {
-    return null;
+    return undefined;
   }
 }
 

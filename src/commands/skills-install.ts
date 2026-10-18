@@ -12,6 +12,7 @@ const SKILL_NAMES = [
   "pa-space",
   "pa-mcp",
   "pa-example",
+  "pa-task",
 ];
 
 export function registerSkillsCommand(program: Command): void {
@@ -59,7 +60,7 @@ export function registerSkillsCommand(program: Command): void {
       );
       console.log(
         chalk.gray(
-          `\nSkills installed. Restart Claude Code to load them.`,
+          `\nSkills installed. Reload your agent to load them.`,
         ),
       );
     });

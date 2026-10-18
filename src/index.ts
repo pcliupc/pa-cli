@@ -16,6 +16,8 @@ import { registerUsageCommands } from "./commands/usage/index.js";
 import { registerInsightsCommands } from "./commands/insights/index.js";
 import { registerKnowledgeCommands } from "./commands/knowledge/index.js";
 
+import { registerTaskCommands } from "./commands/task/index.js";
+
 const packageJson = JSON.parse(
   fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"),
 ) as { version: string };
@@ -43,5 +45,6 @@ registerLogsCommands(program);
 registerUsageCommands(program);
 registerInsightsCommands(program);
 registerKnowledgeCommands(program);
+registerTaskCommands(program);
 
 program.parse();

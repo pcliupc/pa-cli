@@ -4,6 +4,7 @@ import path from "node:path";
 import os from "node:os";
 import {
   loadConfig,
+  loadProfile,
   setConfigValue,
   maskApiKey,
   listProfiles,
@@ -47,6 +48,17 @@ describe("profile file I/O", () => {
 
   afterEach(() => {
     fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("loads a named profile without changing the current profile or any files", () => {
+    addProfile({ name: "local", serverUrl: "http://localhost:3000", apiKey: "local_key" }, dir);
+    addProfile({ name: "dev", serverUrl: "https://dev.test", apiKey: "dev_key" }, dir);
+    const before = fs.readFileSync(path.join(dir, "config.json"), "utf8");
+    expect(loadProfile("dev", dir).serverUrl).toBe("https://dev.test");
+    expect(getCurrentProfileName(dir)).toBe("local");
+    expect(fs.readFileSync(path.join(dir, "config.json"), "utf8")).toBe(before);
+    expect(() => loadProfile("../dev", dir)).toThrow("Invalid profile name");
+    expect(() => loadProfile("missing", dir)).toThrow("not found");
   });
 
   it("listProfiles returns empty when no profiles exist", () => {

@@ -17,9 +17,8 @@ cliHelp: "pa --help"
 首次使用需配置服务器地址和 API Key：
 
 ```bash
-# 快速开始：直接设置（会自动创建 "local" profile）
-pa config set serverUrl http://localhost:3000
-pa config set apiKey pa_dev_test_key
+# 首次创建 profile（使用用户自己的 Key；不要在聊天或日志中展示真实值）
+pa config profile add local --server-url http://localhost:3000 --api-key "$PA_API_KEY"
 ```
 
 ### 多环境 Profile 管理
@@ -51,7 +50,7 @@ pa config profile remove staging
 
 ## 认证
 
-PA CLI 使用 Bearer Token（API Key）认证。API Key 在 Web 端的 `.env` 文件中通过 `PA_CLI_API_KEY` 环境变量配置。
+PA CLI 使用 Bearer Token（API Key）认证。每个用户在 Web 个人设置中创建自己的 API Key；调用遵循该用户的 Space 权限。Profile 保存对应环境的个人 Key，不使用平台统一 Key。
 
 ### 认证失败处理
 
@@ -61,7 +60,7 @@ PA CLI 使用 Bearer Token（API Key）认证。API Key 在 Web 端的 `.env` �
 Error: Authentication failed. Run "pa config set apiKey <key>" to configure.
 ```
 
-解决方案：确认 CLI 的 apiKey 与 Web 端的 `PA_CLI_API_KEY` 一致。
+解决方案：确认所选 profile 的服务器和个人 API Key 对应、Key 未失效且用户有目标 Space 权限。不要读取或输出 Key 明文来诊断。
 
 ## 全局选项
 
@@ -97,7 +96,7 @@ pa session list --output json --page 1 --limit 10
 ```
 pa <resource> <action> [options] [arguments]
 
-resource: agent | skill | session | example | space | mcp | config
+resource: agent | skill | session | task | example | space | mcp | config
 action:   list | get | upload | download | delete | import | create | logs | feedback
           export-session
           workspace list | workspace download

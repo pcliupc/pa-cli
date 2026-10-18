@@ -12,6 +12,9 @@ export class ApiError extends Error {
     message: string,
     public readonly status: number,
     public readonly errorKey?: string,
+    public readonly errorCode?: string,
+    public readonly taskId?: string,
+    public readonly sessionId?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -50,49 +53,53 @@ export class PaApiClient {
     }
 
     const errorKey = extractErrorKey(body);
+    const errorCode = extractField(body, "errorCode");
+    const taskId = extractField(body, "taskId");
+    const sessionId = extractField(body, "sessionId");
 
     switch (response.status) {
       case 401:
         throw new ApiError(
           'Authentication failed. Run "pa config set apiKey <key>" to configure.',
           401,
-          errorKey,
+          errorKey, errorCode, taskId, sessionId,
         );
       case 403:
-        throw new ApiError("Permission denied.", 403, errorKey);
+        throw new ApiError("Permission denied.", 403, errorKey, errorCode, taskId, sessionId);
       case 404:
         throw new ApiError(
           `Resource not found. ${extractErrorMessage(body)}`,
           404,
-          errorKey,
+          errorKey, errorCode, taskId, sessionId,
         );
       case 409:
         throw new ApiError(
           `Conflict. ${extractErrorMessage(body)}`,
           409,
-          errorKey,
+          errorKey, errorCode, taskId, sessionId,
         );
       case 410:
         if (errorKey === "insightsJobResultExpired") {
-          throw new ApiError("Insight job result has expired.", 410, errorKey);
+          throw new ApiError("Insight job result has expired.", 410, errorKey, errorCode, taskId, sessionId);
         }
         throw new ApiError(
           `Resource expired. ${extractErrorMessage(body)}`,
           410,
-          errorKey,
+          errorKey, errorCode, taskId, sessionId,
         );
       default:
         throw new ApiError(
           `Server error (${response.status}). ${extractErrorMessage(body)}`,
           response.status,
-          errorKey,
+          errorKey, errorCode, taskId, sessionId,
         );
     }
   }
 
-  async getJson<T = unknown>(apiPath: string): Promise<T> {
+  async getJson<T = unknown>(apiPath: string, signal?: AbortSignal): Promise<T> {
     try {
       const response = await this.fetchFn(this.buildUrl(apiPath), {
+        ...(signal ? { signal, redirect: "error" as const } : {}),
         method: "GET",
         headers: this.headers(),
       });
@@ -140,9 +147,11 @@ export class PaApiClient {
   async postMultipart<T = unknown>(
     apiPath: string,
     formData: FormData,
+    signal?: AbortSignal,
   ): Promise<T> {
     try {
       const response = await this.fetchFn(this.buildUrl(apiPath), {
+        ...(signal ? { signal, redirect: "error" as const } : {}),
         method: "POST",
         headers: this.headers(),
         body: formData,
@@ -154,9 +163,10 @@ export class PaApiClient {
     }
   }
 
-  async postJson<T = unknown>(apiPath: string, body?: unknown): Promise<T> {
+  async postJson<T = unknown>(apiPath: string, body?: unknown, signal?: AbortSignal): Promise<T> {
     try {
       const response = await this.fetchFn(this.buildUrl(apiPath), {
+        ...(signal ? { signal, redirect: "error" as const } : {}),
         method: "POST",
         headers: {
           ...this.headers(),
@@ -183,6 +193,18 @@ export class PaApiClient {
       });
       await this.handleResponse(response);
       return (await response.json()) as T;
+    } catch (err) {
+      throw wrapNetworkError(err, this.serverUrl);
+    }
+  }
+
+  async getBytes(apiPath: string, signal?: AbortSignal): Promise<Buffer> {
+    try {
+      const response = await this.fetchFn(this.buildUrl(apiPath), {
+        method: "GET", headers: this.headers(), signal, redirect: "error",
+      });
+      await this.handleResponse(response);
+      return Buffer.from(await response.arrayBuffer());
     } catch (err) {
       throw wrapNetworkError(err, this.serverUrl);
     }
@@ -234,4 +256,12 @@ function wrapNetworkError(err: unknown, serverUrl: string): Error {
     );
   }
   return err instanceof Error ? err : new Error(String(err));
+}
+
+function extractField(body: string, field: string): string | undefined {
+  try {
+    const parsed = JSON.parse(body);
+    const value = parsed[field] ?? (["taskId", "sessionId"].includes(field) ? parsed.details?.[field] : undefined);
+    return typeof value === "string" ? value : undefined;
+  } catch { return undefined; }
 }

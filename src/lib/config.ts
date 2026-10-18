@@ -312,3 +312,11 @@ export function maskApiKey(key: string): string {
   if (!key || key.length <= 6) return key;
   return key.slice(0, 5) + "*".repeat(key.length - 8) + key.slice(-3);
 }
+
+/** Read a named profile for one command without switching the active profile. */
+export function loadProfile(name: string, configDir?: string): PaConfig {
+  validateProfileName(name);
+  const profile = readProfileFile(name, configDir);
+  if (!profile) throw new Error(`Profile "${name}" not found.`);
+  return profile;
+}

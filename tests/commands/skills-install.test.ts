@@ -12,6 +12,7 @@ const EXPECTED_SKILLS = [
   "pa-space",
   "pa-mcp",
   "pa-example",
+  "pa-task",
 ];
 
 async function runSkillsInstall(argv: string[]) {
@@ -28,7 +29,8 @@ async function runSkillsInstall(argv: string[]) {
 
 describe("skills-install command", () => {
   it("installs all bundled skills including pa-example", async () => {
-    const targetDir = fs.mkdtempSync(path.join(os.tmpdir(), "pa-skills-install-"));
+    const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "pa-skills-install-"));
+    const targetDir = path.join(rootDir, ".agents", "skills");
 
     await runSkillsInstall(["skills-install", "--dir", targetDir]);
 
@@ -46,6 +48,6 @@ describe("skills-install command", () => {
     );
     expect(paExampleSkill).toContain("name: pa-example");
 
-    fs.rmSync(targetDir, { recursive: true, force: true });
+    fs.rmSync(rootDir, { recursive: true, force: true });
   });
 });

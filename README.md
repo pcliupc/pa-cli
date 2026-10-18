@@ -487,3 +487,28 @@ src/
 | `cli-table3` | 表格输出 |
 | `chalk` | 彩色终端输出 |
 | `ora` | 加载动画 |
+
+
+## PA task 调用
+
+普通 PA 任务支持提交业务参数和文件、有限等待、交互回答、停止/恢复及结构化结果。IPA 继续使用原有入口。
+
+先核对当前默认 profile 的名称和服务器地址。现有 `pa agent list/get`、`pa space list` 使用全局当前 profile；task 的 `--profile` 只影响本次任务命令。因此，示例中的 `PROFILE_NAME` 和 Agent/Space ID 必须来自同一已核对环境。不要隐式运行 `pa config use`，也不要读取或展示 API Key；若目标环境不同，由用户明确选择环境或使用已在目标环境核实的 ID。
+
+```bash
+pa --output json task submit --profile PROFILE_NAME --agent AGENT_ID --space SPACE_ID \
+  --request request.json --idempotency-key feedback-batch-42 --file feedback.csv
+pa --output json task wait TASK_ID --profile PROFILE_NAME --timeout 60
+pa --output json task get TASK_ID --profile PROFILE_NAME
+pa --output json task respond TASK_ID --profile PROFILE_NAME --interaction INTERACTION_ID --request response.json
+pa --output json task result TASK_ID --profile PROFILE_NAME --download-dir ./results/batch-42
+pa skills-install --dir .agents/skills
+```
+
+`request.json` 包含 TaskEnvelope（至少 objective、definitionOfDone）；`--version` 可指定版本。`--profile` 仅影响本次 task 命令，不切换全局环境。网络响应不明时重试原 key 和原内容，不创建重复任务。
+
+控制命令为 `start / stop / recover / resume / continue-budget`，除 start 外须显式 `--command-id`。`--request` 可提供从 `get.allowedActions[].context` 保存的原上下文，支持准确重试。需要用户同意的审批和追加预算由调用方明确决定，不会自动执行。已完成普通任务只读。
+
+等待默认最多 60 秒（包含 HTTP 时间；单次 HTTP 超时 30 秒；`--timeout 0` 只读一次快照），`waitReason` 为 terminal、action_required 或 timeout；成功查询退出 0，即使任务 failed/waiting。API/CLI 错误退出 1，JSON 模式保留 status/errorCode/errorKey；Ctrl-C 退出 130 且不停止任务。业务结果在 `result.result.data`，下载精确版本并验证 SHA-256，拒绝不安全路径且不覆盖已有文件。
+
+任务无需保持调用方连接，但执行仍依赖平台内部 Web→Backend 流；本版本不保证 Web 重启后自动续跑。完整 API 文档和反馈分析 fixture 位于平台仓库 `docs/PA_TASK_API.md`、`docs/examples/pa-task/`。随包的 `pa-task` Skill 可通过上面的 `skills-install` 命令安装给 Codex。

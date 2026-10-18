@@ -57,6 +57,24 @@ describe('bounded task polling', () => {
       expect((await client.wait('run-1', { timeoutSeconds: 0 })).waitReason).toBe('action_required');
     }
   });
+  it.each([
+    ['resume', 'user_stopped'],
+    ['continue_budget', 'run_budget_exhausted'],
+    ['recover', 'verification_required'],
+  ])('returns %s pauses as action_required instead of terminal failure', async (action, failureCode) => {
+    let calls = 0;
+    const client = await setup((_url, init) => {
+      calls++; expect(init.method).toBe('GET');
+      return json(status('waiting', {
+        execution: { status: 'waiting', sourceStatus: 'active', failureCode },
+        allowedActions: [{ action, context: { runtimeGeneration: 1 } }],
+      }));
+    });
+    expect(await client.wait('run-1', { timeoutSeconds: 60 })).toMatchObject({
+      taskId: 'run-1', execution: { status: 'waiting', failureCode }, waitReason: 'action_required',
+    });
+    expect(calls).toBe(1);
+  });
   it('timeout retains task identity and does not issue a control request', async () => {
     const client = await setup((_url, init) => { expect(init.method).toBe('GET'); return json(status()); });
     expect(await client.wait('run-1', { timeoutSeconds: 0 })).toMatchObject({ taskId: 'run-1', waitReason: 'timeout' });

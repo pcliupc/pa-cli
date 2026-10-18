@@ -7,6 +7,10 @@ description: "Use when a business task should be delegated to an ordinary PA fro
 
 Use the user's existing PA CLI profile and personal API Key. Never read or print keys. `pa task` targets ordinary PAs; IPA continues to use its existing entry point.
 
+## Availability
+
+Verify `pa task --help` before assuming the installed CLI supports tasks. The target Web must also have `/api/tasks` deployed; a local CLI update does not deploy the API. A repository build does not update the global `pa` installation or publish an npm release. When working from the repository before release, use `node /absolute/repository/path/cli/dist/index.js` in place of `pa` after building the CLI. Do not silently publish, install globally, or switch environments. After an authorized CLI update, refresh this Skill with `pa skills-install --dir .agents/skills` in the intended project.
+
 ## Workflow
 
 1. Confirm the current global profile name and server URL, and the intended Space, input, and business goal. Existing `pa agent list/get` and `pa space list` use the global active profile; task `--profile` affects only that task command. Discover the intended ordinary PA with `pa agent list --output json` and `pa agent get <id> --output json`, then use the **same environment** for task submission and follow-up calls. `PROFILE_NAME` below is that verified profile, not a default environment. Never silently run `pa config use`, inspect credential files, or print keys. If the intended target differs from the current profile, have the user explicitly select the environment or use IDs already verified for the target; do not carry IDs across environments.

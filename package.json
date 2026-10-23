@@ -2,6 +2,10 @@
   "name": "@pcliupc/pa-cli",
   "version": "1.11.0",
   "description": "PA Framework CLI - manage agents and skills from the command line",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pcliupc/pa-cli.git"
+  },
   "type": "module",
   "bin": {
     "pa": "./dist/index.js"

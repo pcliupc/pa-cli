@@ -2,7 +2,7 @@
 
 PA Framework 命令行工具，通过命令行管理智能体、技能、会话和资料库，提交 PA 任务并获取结果。
 
-版本变化见 [CHANGELOG](CHANGELOG.md)。建议使用 Node.js 20 或更高版本；发布流水线使用 Node.js 20 验证。
+版本变化见 [CHANGELOG](CHANGELOG.md)。建议使用 Node.js 20 或更高版本；发布流水线使用 Node.js 24，通过 npm Trusted Publisher 认证。
 
 ## 安装
 

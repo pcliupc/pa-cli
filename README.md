@@ -1,6 +1,8 @@
 # PA CLI
 
-PA Framework 命令行工具，通过命令行管理流程智能体平台的智能体、技能和会话。
+PA Framework 命令行工具，通过命令行管理智能体、技能、会话和资料库，提交 PA 任务并获取结果。
+
+版本变化见 [CHANGELOG](CHANGELOG.md)。建议使用 Node.js 20 或更高版本；发布流水线使用 Node.js 20 验证。
 
 ## 安装
 
@@ -143,10 +145,8 @@ pa agent version publish demo v3           # 切换当前发布版本
 pa agent download demo                     # 下载为 demo.zip
 pa agent download demo -o ./demo.zip       # 指定输出路径
 
-pa agent insights demo                     # 生成业务 + 设计洞察；默认 local
-pa agent insights demo --type business     # 只生成业务洞察
-pa agent insights demo --type design --version <version-id>
-                                           # 生成指定 Agent Version 的设计洞察
+pa agent insights demo                     # 生成业务洞察；默认 local
+pa agent insights demo --type business     # 显式选择业务洞察
 pa agent insights demo --persist           # 成功后覆盖当前正式洞察
 pa agent insights demo --use-available     # 覆盖率不足时直接使用现有有效样本
 
@@ -265,8 +265,7 @@ PACLI 可以调用平台已有的模型、密钥和默认 prompt，对单个 Ses
 ├── manifest.json
 ├── summary.md                    # Session 摘要任务
 ├── diagnostics/summary.md        # Session 执行诊断
-├── business/insights.md          # Agent 业务洞察（如请求）
-└── design/insights.md            # Agent 设计洞察（如请求）
+└── business/insights.md          # Agent 业务洞察
 ```
 
 `manifest.json` 包含任务状态、输入 basis、覆盖率、模型、prompt hash、generator version 和各 component 结果，适合后续比较 prompt 或生成策略。
@@ -287,21 +286,22 @@ pa session summarize <session-id> --output-dir ./insight-evaluations
 #### 生成 Agent 洞察
 
 ```bash
-# 默认生成 business + design，结果为 local
+# 生成业务洞察，结果为 local
 pa agent insights <agent-id>
 
-# 只生成一个 component
+# 显式选择业务洞察
 pa agent insights <agent-id> --type business
-pa agent insights <agent-id> --type design --version <agent-version-id>
 
-# 覆盖成功生成的正式 component
-pa agent insights <agent-id> --persist --type all
+# 覆盖成功生成的正式业务洞察
+pa agent insights <agent-id> --persist
 
 # 非交互环境在覆盖率不足时，显式接受现有有效样本
 pa agent insights <agent-id> --use-available
 ```
 
-命令会在创建任务前显示 business / design 的 `total`、`usable`、`included` 覆盖率。覆盖率不足时：
+设计分析已并入业务洞察，作为支持证据。当前 `--type all` 兼容为业务洞察，不提供单独的 `--type design` 生成，也不支持按 `--version` 指定版本。
+
+命令会在创建任务前显示业务洞察的 `total`、`usable`、`included` 覆盖率。覆盖率不足时：
 
 - 交互终端会询问是否继续，只有输入 `y` 或 `yes` 才使用现有有效样本。
 - 非交互环境和 `--output json` 不会询问，必须显式传 `--use-available`。
@@ -400,7 +400,7 @@ Live Artifact 支持 html-app（HTML Bundle）和 course（Markdown Flow）两�
 
 ## AI Agent Skills
 
-CLI 附带 7 个 AI Agent Skills，可供 Claude Code 等 AI Agent 使用。
+CLI 附带 8 个 AI Agent Skills，可供 Codex、Claude Code 等 AI Agent 使用。
 
 ### 安装 Skills
 
@@ -410,12 +410,13 @@ CLI 附带 7 个 AI Agent Skills，可供 Claude Code 等 AI Agent 使用。
 pa skills-install
 ```
 
-这会将 7 个 skills 安装到当前项目的 `.claude/skills/` 目录。安装后重启 Claude Code 即可自动加载。
+这会将 8 个 Skills 安装到当前项目的 `.claude/skills/` 目录。安装后重新加载 Agent，使其读取更新后的 Skills。
 
 也可指定目标目录：
 
 ```bash
 pa skills-install --dir /path/to/project/.claude/skills
+pa skills-install --dir .agents/skills       # Codex 等 Agent 可使用的项目目录
 ```
 
 ### 包含的 Skills
@@ -429,6 +430,7 @@ pa skills-install --dir /path/to/project/.claude/skills
 | `pa-space` | 空间管理 |
 | `pa-mcp` | MCP 服务器管理 |
 | `pa-example` | 示例库管理（list/import/export-session/delete） |
+| `pa-task` | 普通 PA 任务提交、人工交互、状态控制和结果下载 |
 
 ## 认证
 

@@ -19,7 +19,7 @@ cliHelp: "pa agent --help"
 - **当前发布版本（Current Published Version）**：逻辑 Agent 当前默认给新 session 使用的版本。
 - **config.yaml**：智能体的配置文件，定义阶段、人设、MCP 服务器等。
 - **Private Skill**：智能体私有的技能，存储在智能体目录的 `skills/` 子目录中。
-- **Agent 洞察**：基于已有 Session Insight 生成的 business 和 design 两类聚合结果；始终使用平台已有模型、密钥和默认 prompt。
+- **Agent 洞察**：基于已有 Session Insight 生成的业务洞察，设计分析作为支持证据并入其中；始终使用平台已有模型、密钥和默认 prompt。
 - **覆盖率（Coverage）**：生成前显示 `total`、`usable`、`included`，说明窗口内总 Session、已有可用 Session Insight 和实际纳入生成的数量。
 - **local / persist**：`local` 是默认模式，结果落到 `.pa/evaluations/<job-id>/` 并保留在短期任务结果中，不进入正式 Web 洞察页面；`persist` 必须显式指定，成功后覆盖对应正式 snapshot component。
 
@@ -145,17 +145,14 @@ pa agent delete demo -f
 ### 生成 Agent 洞察
 
 ```bash
-# 默认生成 business + design，结果为 local
+# 生成业务洞察，结果为 local
 pa agent insights <agent-id>
 
-# 只生成业务洞察
+# 显式选择业务洞察
 pa agent insights <agent-id> --type business
 
-# 生成指定 Agent Version 的设计洞察
-pa agent insights <agent-id> --type design --version <agent-version-id>
-
-# 生成成功后直接覆盖对应正式 component
-pa agent insights <agent-id> --persist --type all
+# 生成成功后直接覆盖正式业务洞察
+pa agent insights <agent-id> --persist
 
 # 覆盖率不足时，不询问并直接使用已有有效样本
 pa agent insights <agent-id> --use-available
@@ -164,7 +161,9 @@ pa agent insights <agent-id> --use-available
 pa agent insights <agent-id> --output-dir ./insight-evaluations
 ```
 
-生成前必须先看 CLI 输出的 business / design 覆盖率：
+当前 `--type all` 兼容为业务洞察；设计分析已并入业务洞察，没有单独的 `--type design` 生成，也没有按 `--version` 指定版本的参数。
+
+生成前必须先看 CLI 输出的业务洞察覆盖率：
 
 - 覆盖不完整时，交互终端会询问是否继续，只有输入 `y` 或 `yes` 才继续。
 - 非交互环境和 `--output json` 不能询问，必须显式传 `--use-available`。
@@ -174,8 +173,7 @@ pa agent insights <agent-id> --output-dir ./insight-evaluations
 默认结果写入 `.pa/evaluations/<job-id>/`：
 
 - `manifest.json`：任务状态、覆盖率、输入 basis、模型、prompt hash、generator version 和 component 元数据
-- `business/insights.md`：业务洞察（如请求）
-- `design/insights.md`：设计洞察（如请求）
+- `business/insights.md`：业务洞察
 
 如果 CLI 因 `Ctrl-C`、等待超时或轮询网络失败停止等待，平台任务仍以数据库状态为准。完成、失败等终态输出会包含 job ID；中断、超时或轮询失败时，错误提示也会给出恢复所需的 job ID。CLI 不承诺在创建任务瞬间单独打印 job ID。取得 job ID 后恢复：
 
@@ -229,10 +227,10 @@ pa agent version get demo v1
 
 ```bash
 # 第一次保持 local，检查覆盖率和本地结果
-pa agent insights demo --type all --output-dir ./agent-insight-evaluations
+pa agent insights demo --type business --output-dir ./agent-insight-evaluations
 
 # 用户确认结果可作为正式快照后，再显式 persist
-pa agent insights demo --type all --persist
+pa agent insights demo --type business --persist
 ```
 
 如果覆盖率不足，应把 `total / usable / included` 告知用户；只有用户接受基于现有样本生成时才确认继续或增加 `--use-available`。
